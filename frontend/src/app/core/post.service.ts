@@ -7,6 +7,10 @@ export type PostStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED';
 
 export interface PostView {
   id: string;
+  authorId: string;
+  authorUsername: string;
+  authorDisplayName: string;
+  authorAvatarMediaId: string | null;
   body: string | null;
   status: PostStatus;
   groupId: string | null;
@@ -15,6 +19,7 @@ export interface PostView {
   version: number;
   createdAt: string;
   updatedAt: string;
+  publishedAt: string | null;
   scheduleFailureReason: string | null;
 }
 

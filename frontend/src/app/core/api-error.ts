@@ -52,6 +52,8 @@ const MESSAGES: Record<string, string> = {
   schedule_not_allowed: 'Запись опубликована — расписание недоступно',
   schedule_in_progress: 'Публикация уже выполняется, повторите через минуту',
   bad_request: 'Проверьте запрос и попробуйте снова',
+  comment_deleted: 'Комментарий удалён',
+  already_deleted: 'Комментарий уже удалён',
 };
 
 export function toProblem(error: unknown): ApiProblem {

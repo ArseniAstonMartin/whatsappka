@@ -1,0 +1,113 @@
+@if (loading()) {
+  <div class="stack" aria-busy="true">
+    <app-skeleton width="100%" height="160px" />
+    <app-skeleton width="100%" height="80px" />
+  </div>
+} @else if (notFound()) {
+  <app-state-panel kind="not-found" title="Запись не найдена" message="Возможно, ссылка неверна, запись удалена или недоступна." />
+} @else if (error()) {
+  <app-state-panel kind="error" title="Не удалось загрузить запись" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="load()">Повторить</button>
+  </app-state-panel>
+} @else if (post(); as p) {
+  <app-card>
+    <div class="header">
+      <a class="author" [routerLink]="['/users', p.authorUsername]">
+        @if (p.authorAvatarMediaId) {
+          <app-media-view
+            [mediaId]="p.authorAvatarMediaId!"
+            variant="320"
+            shape="circle"
+            [fallbackToOriginal]="true"
+            [label]="'Аватар: ' + p.authorDisplayName"
+          />
+        } @else {
+          <app-avatar [name]="p.authorDisplayName" [size]="40" />
+        }
+        <span class="who">
+          <span class="name">{{ p.authorDisplayName }}</span>
+          <span class="username">&#64;{{ p.authorUsername }}</span>
+        </span>
+      </a>
+      @if (p.publishedAt) {
+        <span class="time">
+          {{ p.publishedAt | date: 'short' }}
+          @if (edited()) {
+            · изменено
+          }
+        </span>
+      }
+    </div>
+
+    @if (p.body) {
+      <p class="body">{{ p.body }}</p>
+    }
+
+    @if (p.mediaIds.length > 0) {
+      <div class="media-grid">
+        @for (mediaId of p.mediaIds; track mediaId) {
+          <app-media-view [mediaId]="mediaId" variant="1280" [fallbackToOriginal]="true" label="Изображение публикации" />
+        }
+      </div>
+    }
+
+    @if (p.hashtags.length > 0) {
+      <ul class="hashtags">
+        @for (tag of p.hashtags; track tag) {
+          <li>#{{ tag }}</li>
+        }
+      </ul>
+    }
+
+    @if (isOwn()) {
+      <div class="actions">
+        <a [routerLink]="['/posts', p.id, 'edit']" appButton variant="secondary">Редактировать</a>
+      </div>
+    }
+  </app-card>
+
+  <section class="comments" aria-labelledby="comments-title">
+    <h2 id="comments-title" class="section-title">Комментарии</h2>
+
+    <app-card>
+      <form class="inline-form" (ngSubmit)="submitComment()" novalidate>
+        <app-text-field
+          [formControl]="newCommentControl"
+          label="Написать комментарий"
+          [multiline]="true"
+          [maxLength]="2000"
+          [errorText]="postCommentError()"
+        />
+        <button type="submit" appButton [busy]="postingComment()" [disabled]="postingComment()">Отправить</button>
+      </form>
+    </app-card>
+
+    @if (commentsLoading()) {
+      <app-skeleton width="100%" height="80px" />
+    } @else if (commentsError()) {
+      <app-state-panel kind="error" title="Не удалось загрузить комментарии" [message]="commentsError()!" />
+    } @else if (commentNodes().length === 0) {
+      <app-state-panel kind="empty" title="Комментариев пока нет" message="Будьте первым, кто ответит." />
+    } @else {
+      <ul class="roots">
+        @for (node of commentNodes(); track node.comment.id) {
+          <app-comment-item [node]="node" [postId]="p.id" (changed)="onCommentsChanged()" />
+        }
+      </ul>
+      @if (hasMoreComments()) {
+        <div class="more">
+          <button
+            type="button"
+            appButton
+            variant="secondary"
+            [busy]="loadingMoreComments()"
+            [disabled]="loadingMoreComments()"
+            (click)="loadMoreComments()"
+          >
+            Загрузить ещё
+          </button>
+        </div>
+      }
+    }
+  </section>
+}

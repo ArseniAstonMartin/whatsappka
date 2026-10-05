@@ -17,12 +17,12 @@
         <span class="username">&#64;{{ post().authorUsername }}</span>
       </span>
     </a>
-    <span class="time">
+    <a class="time" [routerLink]="['/posts', post().id]">
       {{ post().publishedAt | date: 'short' }}
       @if (edited()) {
         · изменено
       }
-    </span>
+    </a>
   </div>
 
   @if (post().body) {
@@ -45,12 +45,13 @@
     </ul>
   }
 
-  @if (isOwn()) {
-    <div class="actions">
+  <div class="actions">
+    <a [routerLink]="['/posts', post().id]" appButton variant="ghost">Комментарии</a>
+    @if (isOwn()) {
       <a [routerLink]="['/posts', post().id, 'edit']" appButton variant="secondary">Редактировать</a>
       <button type="button" appButton variant="danger" [busy]="removing()" [disabled]="removing()" (click)="remove()">
         Удалить
       </button>
-    </div>
-  }
+    }
+  </div>
 </app-card>

@@ -1,0 +1,71 @@
+<li class="comment" [class.deleted]="node().comment.deleted">
+  <div class="header">
+    <a class="author" [routerLink]="['/users', node().comment.authorUsername]">
+      @if (node().comment.authorAvatarMediaId) {
+        <app-media-view
+          [mediaId]="node().comment.authorAvatarMediaId!"
+          variant="320"
+          shape="circle"
+          [fallbackToOriginal]="true"
+          [label]="'Аватар: ' + node().comment.authorDisplayName"
+        />
+      } @else {
+        <app-avatar [name]="node().comment.authorDisplayName" [size]="32" />
+      }
+      <span class="name">{{ node().comment.authorDisplayName }}</span>
+    </a>
+    <span class="time">
+      {{ node().comment.createdAt | date: 'short' }}
+      @if (node().comment.edited) {
+        · изменено
+      }
+    </span>
+  </div>
+
+  @if (node().comment.deleted) {
+    <p class="body stub">Комментарий удалён</p>
+  } @else {
+    @if (node().replyToDisplayName; as addressee) {
+      <p class="addressee">{{ '@' + addressee }}</p>
+    }
+    @if (!editing()) {
+      <p class="body">{{ node().comment.body }}</p>
+    } @else {
+      <form class="inline-form" (ngSubmit)="submitEdit()" novalidate>
+        <app-text-field [formControl]="editControl" label="Текст" [multiline]="true" [maxLength]="2000" [errorText]="editError()" />
+        <div class="form-actions">
+          <button type="submit" appButton [busy]="editBusy()" [disabled]="editBusy()">Сохранить</button>
+          <button type="button" appButton variant="ghost" (click)="toggleEdit()">Отмена</button>
+        </div>
+      </form>
+    }
+
+    <div class="actions">
+      <button type="button" appButton variant="ghost" (click)="toggleReply()">Ответить</button>
+      @if (isOwn()) {
+        <button type="button" appButton variant="ghost" (click)="toggleEdit()">Редактировать</button>
+        <button type="button" appButton variant="ghost" [busy]="removing()" [disabled]="removing()" (click)="remove()">
+          Удалить
+        </button>
+      }
+    </div>
+  }
+
+  @if (replying()) {
+    <form class="inline-form" (ngSubmit)="submitReply()" novalidate>
+      <app-text-field [formControl]="replyControl" label="Ответ" [multiline]="true" [maxLength]="2000" [errorText]="replyError()" />
+      <div class="form-actions">
+        <button type="submit" appButton [busy]="replyBusy()" [disabled]="replyBusy()">Ответить</button>
+        <button type="button" appButton variant="ghost" (click)="toggleReply()">Отмена</button>
+      </div>
+    </form>
+  }
+
+  @if (node().children.length > 0) {
+    <ul class="children">
+      @for (child of node().children; track child.comment.id) {
+        <app-comment-item [node]="child" [postId]="postId()" (changed)="changed.emit()" />
+      }
+    </ul>
+  }
+</li>

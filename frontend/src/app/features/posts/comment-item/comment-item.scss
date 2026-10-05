@@ -1,0 +1,94 @@
+.comment {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.comment.deleted {
+  background: transparent;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.author app-media-view,
+.author app-avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--radius-avatar);
+  overflow: hidden;
+}
+
+.name {
+  font-weight: 600;
+  font-size: var(--font-size-small);
+}
+
+.author:hover .name {
+  text-decoration: underline;
+}
+
+.time {
+  font-size: var(--font-size-small);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.addressee {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: var(--font-size-small);
+}
+
+.body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.body.stub {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.inline-form {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.form-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.children {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 0 0 var(--space-5);
+  list-style: none;
+  border-left: 2px solid var(--color-border);
+}

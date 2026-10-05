@@ -48,6 +48,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/posts/post-editor/post-editor').then((m) => m.PostEditor),
       },
       {
+        path: 'posts/:id',
+        title: 'Запись',
+        loadComponent: () => import('./features/posts/post-detail/post-detail').then((m) => m.PostDetail),
+      },
+      {
         path: 'groups',
         title: 'Группы',
         loadComponent: () => import('./features/communities/community-catalog/community-catalog').then((m) => m.CommunityCatalog),

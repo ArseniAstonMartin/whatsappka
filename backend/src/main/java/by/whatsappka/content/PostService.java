@@ -6,6 +6,7 @@ import by.whatsappka.platform.outbox.OutboxWriter;
 import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.CursorPage;
 import by.whatsappka.platform.web.PageSize;
+import by.whatsappka.social.SocialRelations;
 import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -33,12 +34,17 @@ public class PostService {
 
     private final JdbcTemplate jdbc;
     private final CommunityMembershipService communities;
+    private final SocialRelations relations;
     private final OutboxWriter outbox;
     private final Clock clock;
 
-    public PostService(JdbcTemplate jdbc, CommunityMembershipService communities, OutboxWriter outbox, Clock clock) {
+    public PostService(
+            JdbcTemplate jdbc, CommunityMembershipService communities, SocialRelations relations,
+            OutboxWriter outbox, Clock clock
+    ) {
         this.jdbc = jdbc;
         this.communities = communities;
+        this.relations = relations;
         this.outbox = outbox;
         this.clock = clock;
     }
@@ -49,9 +55,14 @@ public class PostService {
     ) {
     }
 
+    /**
+     * {@code scheduleFailureReason} заполнен только для автора — чужому читателю эта диагностика не нужна.
+     * Поля автора нужны чужому читателю detail-страницы; автор своей записи их просто не показывает.
+     */
     public record PostView(
-            UUID id, String body, String status, UUID groupId, List<UUID> mediaIds, List<String> hashtags,
-            long version, Instant createdAt, Instant updatedAt, String scheduleFailureReason
+            UUID id, UUID authorId, String authorUsername, String authorDisplayName, UUID authorAvatarMediaId,
+            String body, String status, UUID groupId, List<UUID> mediaIds, List<String> hashtags,
+            long version, Instant createdAt, Instant updatedAt, Instant publishedAt, String scheduleFailureReason
     ) {
     }
 
@@ -144,16 +155,28 @@ public class PostService {
         }
     }
 
+    /**
+     * Автор видит свою запись в любом статусе (для правки и продолжения черновика). Чужой читатель —
+     * только опубликованную, непривязанную к блокировке и видимую по правилам группы ({@link PostVisibilitySql}),
+     * как в ленте; причина отказа расписания ему не передаётся.
+     */
     @Transactional(readOnly = true)
-    public PostView get(UUID postId, UUID authorId) {
-        List<Row> rows = jdbc.query(
-                "SELECT id, body, status, group_id, version, created_at, updated_at, schedule_failure_reason FROM posts "
-                        + "WHERE id = ? AND author_id = ? AND deleted_at IS NULL",
-                ROW_MAPPER, postId, authorId);
+    public PostView get(UUID postId, UUID viewerId) {
+        List<FullRow> rows = jdbc.query(
+                "SELECT p.id, p.body, p.status, p.group_id, p.version, p.created_at, p.updated_at, p.published_at, "
+                        + "p.schedule_failure_reason, p.author_id, u.username AS author_username, "
+                        + "pr.display_name AS author_display_name, pr.avatar_media_id AS author_avatar_media_id "
+                        + "FROM posts p JOIN users u ON u.id = p.author_id JOIN user_profiles pr ON pr.user_id = u.id "
+                        + "WHERE p.id = ? AND p.deleted_at IS NULL",
+                FULL_ROW_MAPPER, postId);
         if (rows.isEmpty()) {
             throw ApiException.notFound();
         }
-        Row row = rows.get(0);
+        FullRow row = rows.get(0);
+        boolean own = row.authorId().equals(viewerId);
+        if (!own) {
+            requirePubliclyVisible(row, viewerId);
+        }
         List<UUID> mediaIds = jdbc.query(
                 "SELECT media_id FROM post_media WHERE post_id = ? ORDER BY position",
                 (rs, n) -> UUID.fromString(rs.getString("media_id")), postId);
@@ -161,8 +184,24 @@ public class PostService {
                 "SELECT h.normalized_name FROM post_hashtags ph JOIN hashtags h ON h.id = ph.hashtag_id "
                         + "WHERE ph.post_id = ? ORDER BY h.normalized_name",
                 (rs, n) -> rs.getString("normalized_name"), postId);
-        return new PostView(row.id(), row.body(), row.status(), row.groupId(), mediaIds, hashtags,
-                row.version(), row.createdAt(), row.updatedAt(), row.scheduleFailureReason());
+        return new PostView(row.id(), row.authorId(), row.authorUsername(), row.authorDisplayName(), row.authorAvatarMediaId(),
+                row.body(), row.status(), row.groupId(), mediaIds, hashtags,
+                row.version(), row.createdAt(), row.updatedAt(), row.publishedAt(), own ? row.scheduleFailureReason() : null);
+    }
+
+    private void requirePubliclyVisible(FullRow row, UUID viewerId) {
+        if (!"PUBLISHED".equals(row.status())) {
+            throw ApiException.notFound();
+        }
+        if (relations.blockedBetween(viewerId, row.authorId())) {
+            throw ApiException.notFound();
+        }
+        Boolean visible = jdbc.query(
+                "SELECT " + PostVisibilitySql.GROUP_VISIBLE_TO_VIEWER + " AS visible FROM posts p WHERE p.id = ?",
+                (rs, n) -> rs.getBoolean("visible"), viewerId, viewerId, row.id()).stream().findFirst().orElse(null);
+        if (!Boolean.TRUE.equals(visible)) {
+            throw ApiException.notFound();
+        }
     }
 
     /** Свои черновики и отложенные записи, от недавно изменённых. Опубликованные сюда не попадают. */
@@ -276,6 +315,28 @@ public class PostService {
 
     private record PublishRow(UUID groupId, String body, String status) {
     }
+
+    private record FullRow(
+            UUID id, String body, String status, UUID groupId, long version, Instant createdAt, Instant updatedAt,
+            Instant publishedAt, String scheduleFailureReason, UUID authorId, String authorUsername,
+            String authorDisplayName, UUID authorAvatarMediaId
+    ) {
+    }
+
+    private static final org.springframework.jdbc.core.RowMapper<FullRow> FULL_ROW_MAPPER = (rs, n) -> new FullRow(
+            UUID.fromString(rs.getString("id")),
+            rs.getString("body"),
+            rs.getString("status"),
+            rs.getObject("group_id") == null ? null : UUID.fromString(rs.getString("group_id")),
+            rs.getLong("version"),
+            rs.getTimestamp("created_at").toInstant(),
+            rs.getTimestamp("updated_at").toInstant(),
+            rs.getTimestamp("published_at") == null ? null : rs.getTimestamp("published_at").toInstant(),
+            rs.getString("schedule_failure_reason"),
+            UUID.fromString(rs.getString("author_id")),
+            rs.getString("author_username"),
+            rs.getString("author_display_name"),
+            rs.getObject("author_avatar_media_id") == null ? null : UUID.fromString(rs.getString("author_avatar_media_id")));
 
     private record Row(
             UUID id, String body, String status, UUID groupId, long version,
