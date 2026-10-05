@@ -69,6 +69,33 @@ final class CommunitySql {
             SELECT count(*) FROM group_members WHERE group_id = ?
             """;
 
+    /** Публичное вступление. Приватные сообщества принимают участников только через заявку или приглашение. */
+    static final String JOIN_MEMBER = """
+            INSERT INTO group_members (group_id, user_id, role, joined_at)
+            VALUES (?, ?, 'MEMBER', now())
+            """;
+
+    static final String DELETE_MEMBER = """
+            DELETE FROM group_members WHERE group_id = ? AND user_id = ?
+            """;
+
+    static final String SET_MEMBER_ROLE = """
+            UPDATE group_members SET role = ? WHERE group_id = ? AND user_id = ?
+            """;
+
+    static final String SET_OWNER = """
+            UPDATE groups SET owner_id = ?, version = version + 1, updated_at = now() WHERE id = ?
+            """;
+
+    static final String LIST_MEMBERS = """
+            SELECT u.id, u.username, p.display_name, m.role
+            FROM group_members m
+            JOIN users u ON u.id = m.user_id
+            JOIN user_profiles p ON p.user_id = u.id
+            WHERE m.group_id = ?
+            ORDER BY m.joined_at, u.id
+            """;
+
     static final String CATALOG_FIRST = """
             SELECT id, slug, name, avatar_media_id, created_at
             FROM groups

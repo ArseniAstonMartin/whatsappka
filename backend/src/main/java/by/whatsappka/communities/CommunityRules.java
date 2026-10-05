@@ -55,4 +55,37 @@ final class CommunityRules {
         throw ApiException.validation("Проверьте поля запроса",
                 List.of(new FieldErrorDetail("visibility", "Допустимы PUBLIC или PRIVATE")));
     }
+
+    /** Исключать может владелец любого, кроме себя; администратор — только рядовых участников. */
+    static boolean canRemove(Role actor, Role target) {
+        if (actor == Role.OWNER) {
+            return target != Role.OWNER;
+        }
+        return actor == Role.ADMIN && target == Role.MEMBER;
+    }
+
+    /** Назначать и снимать администраторов может только владелец. Владельца это не касается. */
+    static boolean canSetRole(Role actor, Role target) {
+        return actor == Role.OWNER && target != Role.OWNER;
+    }
+
+    static boolean canTransferOwnership(Role actor) {
+        return actor == Role.OWNER;
+    }
+
+    /** Владелец не выходит, пока не передал владение или не удалил сообщество. */
+    static boolean canLeave(Role actor) {
+        return actor != Role.OWNER;
+    }
+
+    static Role parseAssignableRole(String raw) {
+        if ("ADMIN".equals(raw)) {
+            return Role.ADMIN;
+        }
+        if ("MEMBER".equals(raw)) {
+            return Role.MEMBER;
+        }
+        throw ApiException.validation("Проверьте поля запроса",
+                List.of(new FieldErrorDetail("role", "Допустимы ADMIN или MEMBER")));
+    }
 }
