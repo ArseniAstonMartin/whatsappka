@@ -170,7 +170,7 @@ public class PostService {
                         + "p.schedule_failure_reason, p.author_id, u.username AS author_username, "
                         + "pr.display_name AS author_display_name, pr.avatar_media_id AS author_avatar_media_id "
                         + "FROM posts p JOIN users u ON u.id = p.author_id JOIN user_profiles pr ON pr.user_id = u.id "
-                        + "WHERE p.id = ? AND p.deleted_at IS NULL",
+                        + "WHERE p.id = ? AND p.deleted_at IS NULL AND u.status = 'ACTIVE'",
                 FULL_ROW_MAPPER, postId);
         if (rows.isEmpty()) {
             throw ApiException.notFound();

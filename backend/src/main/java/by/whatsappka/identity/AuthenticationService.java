@@ -53,6 +53,9 @@ public class AuthenticationService {
         if (user == null || user.passwordHash() == null || !passwordMatches) {
             throw invalidCredentials();
         }
+        if (user.isSuspended()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "account_suspended", "Аккаунт ограничен модерацией", List.of(), null);
+        }
         if (!user.isActive()) {
             // Статус проверяется только после верного пароля, чтобы не раскрывать существование аккаунта.
             throw new ApiException(HttpStatus.FORBIDDEN, "account_disabled", "Аккаунт отключён", List.of(), null);

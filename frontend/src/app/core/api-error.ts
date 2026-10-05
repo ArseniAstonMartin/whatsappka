@@ -17,6 +17,7 @@ interface ProblemBody {
 const MESSAGES: Record<string, string> = {
   invalid_credentials: 'Неверный email или пароль',
   account_disabled: 'Аккаунт отключён. Обратитесь в поддержку.',
+  account_suspended: 'Аккаунт временно ограничен модерацией. Срок и подробности сообщит поддержка.',
   conflict: 'Не удалось зарегистрировать аккаунт с такими данными',
   validation_failed: 'Проверьте поля формы',
   too_many_requests: 'Слишком много попыток. Подождите и попробуйте снова.',

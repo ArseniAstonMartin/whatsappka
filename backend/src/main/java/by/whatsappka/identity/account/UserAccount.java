@@ -69,6 +69,12 @@ public class UserAccount {
         return passwordHash;
     }
 
+    public static final String STATUS_SUSPENDED = "SUSPENDED";
+
+    public boolean isSuspended() {
+        return STATUS_SUSPENDED.equals(status);
+    }
+
     public boolean isActive() {
         return STATUS_ACTIVE.equals(status);
     }
