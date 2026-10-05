@@ -90,4 +90,65 @@ final class MessageSql {
     static final String ATTACHMENTS_SUFFIX = """
             ) ORDER BY mm.message_id, mm.position
             """;
+
+    static final String NEXT_EVENT_SEQ = """
+            UPDATE conversations SET next_event_seq = next_event_seq + 1, version = version + 1, updated_at = now()
+            WHERE id = ? RETURNING next_event_seq
+            """;
+
+    static final String INSERT_MESSAGE_EVENT = """
+            INSERT INTO conversation_events (id, conversation_id, event_seq, type, actor_id, message_id, occurred_at)
+            VALUES (?, ?, ?, ?, ?, ?, now())
+            """;
+
+    /** Сообщение блокируется для правки и удаления; проверка идёт внутри блокировки чата. */
+    static final String LOAD_FOR_CHANGE = """
+            SELECT sender_id, created_at, deleted_at FROM messages
+            WHERE id = ? AND conversation_id = ?
+            FOR UPDATE
+            """;
+
+    static final String ATTACHMENT_IDS = """
+            SELECT media_id FROM message_media WHERE message_id = ? ORDER BY position
+            """;
+
+    static final String EDIT_TEXT = """
+            UPDATE messages SET body = ?, version = version + 1, updated_at = now()
+            WHERE id = ?
+            RETURNING version, updated_at
+            """;
+
+    static final String DELETE_MESSAGE = """
+            UPDATE messages SET body = NULL, deleted_at = now(), version = version + 1, updated_at = now()
+            WHERE id = ?
+            """;
+
+    /** Модератор чата: владелец или действующий участник с ролью ADMIN. */
+    static final String IS_CHAT_ADMIN = """
+            SELECT EXISTS (SELECT 1 FROM conversations c WHERE c.id = ? AND c.owner_id = ?)
+                OR EXISTS (SELECT 1 FROM conversation_memberships m
+                           WHERE m.conversation_id = ? AND m.user_id = ? AND m.left_at IS NULL AND m.role = 'ADMIN')
+            """;
+
+    static final String INSERT_AUDIT = """
+            INSERT INTO message_audit (id, message_id, conversation_id, actor_id, action, reason, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, now())
+            """;
+
+    static final String EVENT_CURSOR_STATE = """
+            SELECT events_floor, next_event_seq FROM conversations WHERE id = ?
+            """;
+
+    /**
+     * События после курсора. Событие сообщения видно участнику, только если сообщение отправлено после начала его интервала.
+     */
+    static final String EVENTS_AFTER = """
+            SELECT e.event_seq, e.type, e.occurred_at, e.actor_id, e.message_id, msg.seq AS message_seq
+            FROM conversation_events e
+            LEFT JOIN messages msg ON msg.id = e.message_id
+            WHERE e.conversation_id = ? AND e.event_seq > ?
+              AND (e.message_id IS NULL OR msg.seq > ?)
+            ORDER BY e.event_seq
+            LIMIT ?
+            """;
 }

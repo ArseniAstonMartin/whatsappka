@@ -1,12 +1,10 @@
 package by.whatsappka.messaging;
 
 import by.whatsappka.media.access.MediaLinkType;
-import by.whatsappka.platform.outbox.OutboxWriter;
 import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.social.SocialRelations;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,12 +23,12 @@ public class MessageService {
 
     private final JdbcTemplate jdbc;
     private final SocialRelations relations;
-    private final OutboxWriter outbox;
+    private final MessageEvents events;
 
-    public MessageService(JdbcTemplate jdbc, SocialRelations relations, OutboxWriter outbox) {
+    public MessageService(JdbcTemplate jdbc, SocialRelations relations, MessageEvents events) {
         this.jdbc = jdbc;
         this.relations = relations;
-        this.outbox = outbox;
+        this.events = events;
     }
 
     @Transactional
@@ -67,11 +65,7 @@ public class MessageService {
             jdbc.update(MessageSql.INSERT_ATTACHMENT, id, media.get(i), i + 1);
             jdbc.update(MessageSql.INSERT_LINK, media.get(i), id);
         }
-        outbox.record("conversation", conversationId, "message.created", Map.of(
-                "messageId", id.toString(),
-                "conversationId", conversationId.toString(),
-                "seq", seq,
-                "senderId", sender.toString()));
+        events.record(conversationId, "message.created", sender, id);
         return new Sent(id, seq, false, Instant.now());
     }
 

@@ -5,6 +5,8 @@ import by.whatsappka.platform.web.FieldErrorDetail;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
@@ -14,6 +16,8 @@ public final class MessageRules {
 
     public static final int BODY_MAX = 4000;
     public static final int ATTACHMENTS_MAX = 5;
+    public static final int REASON_MAX = 200;
+    public static final Duration EDIT_WINDOW = Duration.ofHours(24);
 
     private MessageRules() {
     }
@@ -58,5 +62,20 @@ public final class MessageRules {
         if (!stored.equals(incoming)) {
             throw ApiException.conflict("Этот client_message_id уже использован для другого сообщения");
         }
+    }
+
+    /** Правка доступна автору в течение суток после отправки; граница включается. */
+    public static boolean withinEditWindow(Instant createdAt, Instant now) {
+        return !now.isAfter(createdAt.plus(EDIT_WINDOW));
+    }
+
+    /** Причина модераторского удаления: от 1 до 200 символов после обрезки пробелов. */
+    public static String requireReason(String raw) {
+        String reason = raw == null ? "" : raw.strip();
+        if (reason.isEmpty() || reason.length() > REASON_MAX) {
+            throw ApiException.validation("Проверьте поля запроса",
+                    List.of(new FieldErrorDetail("reason", "Причина от 1 до 200 символов")));
+        }
+        return reason;
     }
 }
