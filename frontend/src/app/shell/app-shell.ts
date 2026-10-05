@@ -25,6 +25,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { path: 'profile', label: 'Профиль', icon: 'user', primary: true },
   { path: 'settings', label: 'Настройки', icon: 'settings', primary: false },
   { path: 'manage', label: 'Управление', icon: 'shield', primary: false, roles: ['MODERATOR', 'ADMIN'] },
+  { path: 'admin/users', label: 'Пользователи', icon: 'user', primary: false, roles: ['ADMIN'] },
 ];
 
 @Component({

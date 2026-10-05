@@ -105,6 +105,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/notifications/notifications-page').then((m) => m.NotificationsPage),
       },
       {
+        path: 'admin/users',
+        title: 'Пользователи',
+        canActivate: [requireRoles('ADMIN')],
+        loadComponent: () => import('./features/admin/admin-users/admin-users-page').then((m) => m.AdminUsersPage),
+      },
+      {
         path: 'profile',
         title: 'Мой профиль',
         loadComponent: () => import('./features/profile/own-profile/own-profile').then((m) => m.OwnProfilePage),

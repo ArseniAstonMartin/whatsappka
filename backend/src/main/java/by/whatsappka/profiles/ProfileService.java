@@ -81,6 +81,11 @@ public class ProfileService {
         return own(account, profile);
     }
 
+    /** Сбрасывает кэш публичных полей: нужно после изменений, которые видны на публичном профиле (например, verified). */
+    public void evictPublicFields(UUID userId) {
+        cache.evict(publicFieldsCacheKey(userId));
+    }
+
     private PublicProfileFields cachedPublicFields(UUID userId) {
         String key = publicFieldsCacheKey(userId);
         return cache.get(key, PublicProfileFields.class).orElseGet(() -> {

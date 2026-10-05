@@ -1,0 +1,85 @@
+<h1 class="heading">Пользователи</h1>
+
+<label class="label" for="user-search">Поиск по логину или имени</label>
+<input id="user-search" class="field search" type="search" autocomplete="off" placeholder="Логин или имя" (input)="search($any($event.target).value)" />
+
+<div class="layout">
+  <section class="list-pane" aria-label="Пользователи">
+    @if (loading()) {
+      <div class="stack" aria-busy="true">
+        <app-skeleton width="100%" height="48px" />
+        <app-skeleton width="100%" height="48px" />
+      </div>
+    } @else if (error()) {
+      <app-state-panel kind="error" title="Список не загрузился" [message]="error()!">
+        <button type="button" appButton variant="secondary" (click)="load(true)">Повторить</button>
+      </app-state-panel>
+    } @else if (items().length === 0) {
+      <app-state-panel kind="empty" title="Никого не нашли" message="Попробуйте другой запрос." />
+    } @else {
+      <ul class="list">
+        @for (u of items(); track u.id) {
+          <li>
+            <button type="button" class="row" [class.active]="selected()?.id === u.id" (click)="select(u)">
+              <span class="name">{{ u.displayName }}</span>
+              <span class="meta">&#64;{{ u.username }}</span>
+              <span class="tags">
+                @for (r of u.roles; track r) {
+                  @if (r !== 'USER') {
+                    <span class="tag">{{ r === 'ADMIN' ? 'Админ' : 'Модератор' }}</span>
+                  }
+                }
+                @if (u.verified) {
+                  <span class="tag verified">Проверен</span>
+                }
+                @if (u.status === 'SUSPENDED') {
+                  <span class="tag warn">Ограничен</span>
+                }
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
+      @if (hasMore()) {
+        <div class="more">
+          <button type="button" appButton variant="secondary" [busy]="loadingMore()" (click)="load(false)">Загрузить ещё</button>
+        </div>
+      }
+    }
+  </section>
+
+  <section class="card" aria-label="Управление пользователем">
+    @if (!selected()) {
+      <app-state-panel kind="empty" title="Выберите пользователя" message="Здесь меняются роли и отметка проверенного аккаунта." />
+    } @else {
+      <h2 class="card-title">{{ selected()!.displayName }} <span class="meta">&#64;{{ selected()!.username }}</span></h2>
+
+      <fieldset class="roles">
+        <legend class="section-title">Служебные роли</legend>
+        @for (s of staff; track s.role) {
+          <label class="role">
+            <input type="checkbox" [checked]="hasDraft(s.role)" (change)="toggleRole(s.role, $any($event.target).checked)" />
+            <span>
+              <strong>{{ s.label }}</strong>
+              <span class="meta">{{ s.hint }}</span>
+            </span>
+          </label>
+        }
+      </fieldset>
+
+      <label class="label" for="admin-reason">Причина (попадает в аудит)</label>
+      <textarea id="admin-reason" class="field" rows="2" maxlength="2000" [value]="reason()" (input)="reason.set($any($event.target).value)"></textarea>
+
+      <div class="actions">
+        <button type="button" appButton [disabled]="busy() || !rolesChanged()" [busy]="busy()" (click)="saveRoles()">Сохранить роли</button>
+        <button type="button" appButton variant="secondary" [disabled]="busy()" (click)="toggleVerified()">
+          {{ selected()!.verified ? 'Снять верификацию' : 'Отметить как проверенный' }}
+        </button>
+      </div>
+
+      @if (actionError(); as text) {
+        <p class="error" role="alert">{{ text }}</p>
+      }
+    }
+  </section>
+</div>

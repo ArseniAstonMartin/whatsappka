@@ -66,6 +66,15 @@ public class StompConnections {
         return connection;
     }
 
+    /** Закрывает все подтверждённые соединения пользователя: после смены ролей клиент переподключится и получит новые права. */
+    public void closeUser(UUID userId) {
+        for (Map.Entry<String, Connection> entry : authenticated.entrySet()) {
+            if (entry.getValue().userId().equals(userId)) {
+                close(entry.getKey());
+            }
+        }
+    }
+
     @Scheduled(fixedDelay = 5000)
     public void sweep() {
         for (Map.Entry<String, Connection> entry : authenticated.entrySet()) {
