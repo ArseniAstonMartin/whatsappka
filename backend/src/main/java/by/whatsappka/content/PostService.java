@@ -1,0 +1,235 @@
+package by.whatsappka.content;
+
+import by.whatsappka.communities.CommunityMembershipService;
+import by.whatsappka.media.access.MediaLinkType;
+import by.whatsappka.platform.web.ApiException;
+import by.whatsappka.platform.web.CursorPage;
+import by.whatsappka.platform.web.PageSize;
+import java.nio.charset.StandardCharsets;
+import java.sql.Timestamp;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * CRUD черновиков публикаций (TASK-041). Автор работает только со своими записями; публикация,
+ * расписание, хештеги, лента, комментарии и реакции того же эпика — отдельные задачи.
+ */
+@Service
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+public class PostService {
+
+    private final JdbcTemplate jdbc;
+    private final CommunityMembershipService communities;
+    private final Clock clock;
+
+    public PostService(JdbcTemplate jdbc, CommunityMembershipService communities, Clock clock) {
+        this.jdbc = jdbc;
+        this.communities = communities;
+        this.clock = clock;
+    }
+
+    public record PostSummary(UUID id, String body, String status, UUID groupId, long version, Instant updatedAt) {
+    }
+
+    public record PostView(
+            UUID id, String body, String status, UUID groupId, List<UUID> mediaIds,
+            long version, Instant createdAt, Instant updatedAt
+    ) {
+    }
+
+    @Transactional
+    public UUID create(UUID authorId, UUID groupId, String rawBody, List<UUID> rawMedia) {
+        String body = PostRules.normalizeBody(rawBody);
+        List<UUID> media = rawMedia == null ? List.of() : rawMedia;
+        PostRules.validateMedia(media);
+        if (groupId != null && !communities.isActiveMember(groupId, authorId)) {
+            throw ApiException.forbidden();
+        }
+        UUID id = UUID.randomUUID();
+        Instant now = clock.instant();
+        jdbc.update("INSERT INTO posts (id, author_id, group_id, body, status, created_at, updated_at) "
+                        + "VALUES (?, ?, ?, ?, 'DRAFT', ?, ?)",
+                id, authorId, groupId, body, Timestamp.from(now), Timestamp.from(now));
+        attach(id, authorId, media);
+        return id;
+    }
+
+    @Transactional
+    public void update(UUID postId, UUID authorId, long expectedVersion, String rawBody, List<UUID> rawMedia) {
+        String body = PostRules.normalizeBody(rawBody);
+        List<UUID> media = rawMedia == null ? List.of() : rawMedia;
+        PostRules.validateMedia(media);
+        int updated = jdbc.update(
+                "UPDATE posts SET body = ?, version = version + 1, updated_at = ? "
+                        + "WHERE id = ? AND author_id = ? AND status = 'DRAFT' AND deleted_at IS NULL AND version = ?",
+                body, Timestamp.from(clock.instant()), postId, authorId, expectedVersion);
+        if (updated == 0) {
+            diagnoseUpdateFailure(postId, authorId);
+        }
+        jdbc.update("DELETE FROM media_links WHERE link_type = ? AND link_id = ?", MediaLinkType.POST_ATTACHMENT.name(), postId);
+        jdbc.update("DELETE FROM post_media WHERE post_id = ?", postId);
+        attach(postId, authorId, media);
+    }
+
+    @Transactional
+    public void delete(UUID postId, UUID authorId) {
+        int updated = jdbc.update(
+                "UPDATE posts SET deleted_at = ?, version = version + 1, updated_at = ? "
+                        + "WHERE id = ? AND author_id = ? AND status IN ('DRAFT', 'SCHEDULED') AND deleted_at IS NULL",
+                Timestamp.from(clock.instant()), Timestamp.from(clock.instant()), postId, authorId);
+        if (updated == 0) {
+            diagnoseDeleteFailure(postId, authorId);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public PostView get(UUID postId, UUID authorId) {
+        List<Row> rows = jdbc.query(
+                "SELECT id, body, status, group_id, version, created_at, updated_at FROM posts "
+                        + "WHERE id = ? AND author_id = ? AND deleted_at IS NULL",
+                ROW_MAPPER, postId, authorId);
+        if (rows.isEmpty()) {
+            throw ApiException.notFound();
+        }
+        Row row = rows.get(0);
+        List<UUID> mediaIds = jdbc.query(
+                "SELECT media_id FROM post_media WHERE post_id = ? ORDER BY position",
+                (rs, n) -> UUID.fromString(rs.getString("media_id")), postId);
+        return new PostView(row.id(), row.body(), row.status(), row.groupId(), mediaIds,
+                row.version(), row.createdAt(), row.updatedAt());
+    }
+
+    /** Свои черновики и отложенные записи, от недавно изменённых. Опубликованные сюда не попадают. */
+    @Transactional(readOnly = true)
+    public CursorPage<PostSummary> drafts(UUID authorId, String cursor, Integer limit) {
+        int size = PageSize.limit(limit);
+        Keyset key = decode(cursor);
+        List<Row> rows = key == null
+                ? jdbc.query("SELECT id, body, status, group_id, version, created_at, updated_at FROM posts "
+                        + "WHERE author_id = ? AND status IN ('DRAFT', 'SCHEDULED') AND deleted_at IS NULL "
+                        + "ORDER BY updated_at DESC, id DESC LIMIT ?", ROW_MAPPER, authorId, size + 1)
+                : jdbc.query("SELECT id, body, status, group_id, version, created_at, updated_at FROM posts "
+                        + "WHERE author_id = ? AND status IN ('DRAFT', 'SCHEDULED') AND deleted_at IS NULL "
+                        + "AND (updated_at, id) < (?, ?) ORDER BY updated_at DESC, id DESC LIMIT ?",
+                        ROW_MAPPER, authorId, Timestamp.from(key.at()), key.id(), size + 1);
+        boolean more = rows.size() > size;
+        List<Row> shown = more ? rows.subList(0, size) : rows;
+        List<PostSummary> items = shown.stream()
+                .map(row -> new PostSummary(row.id(), row.body(), row.status(), row.groupId(), row.version(), row.updatedAt()))
+                .toList();
+        String next = more ? encode(shown.get(shown.size() - 1).updatedAt(), shown.get(shown.size() - 1).id()) : null;
+        return new CursorPage<>(items, next, more);
+    }
+
+    private void attach(UUID postId, UUID authorId, List<UUID> media) {
+        for (int i = 0; i < media.size(); i++) {
+            UUID mediaId = media.get(i);
+            requireAttachable(authorId, mediaId);
+            jdbc.update("INSERT INTO post_media (post_id, media_id, position) VALUES (?, ?, ?)", postId, mediaId, i + 1);
+            jdbc.update("INSERT INTO media_links (media_id, link_type, link_id, created_at) VALUES (?, ?, ?, ?)",
+                    mediaId, MediaLinkType.POST_ATTACHMENT.name(), postId, Timestamp.from(clock.instant()));
+        }
+    }
+
+    /** Вложение: готовое собственное изображение назначения POST_IMAGE, ещё не использованное в другой публикации. */
+    private void requireAttachable(UUID authorId, UUID mediaId) {
+        List<MediaRow> rows = jdbc.query(
+                "SELECT owner_id, status, purpose, deleted_at IS NOT NULL AS deleted, "
+                        + "(SELECT count(*) FROM post_media pm WHERE pm.media_id = m.id) AS attached "
+                        + "FROM media_assets m WHERE m.id = ?",
+                (rs, n) -> new MediaRow(
+                        UUID.fromString(rs.getString("owner_id")),
+                        rs.getString("status"),
+                        rs.getString("purpose"),
+                        rs.getBoolean("deleted"),
+                        rs.getLong("attached")),
+                mediaId);
+        if (rows.isEmpty() || rows.get(0).deleted()) {
+            throw ApiException.notFound();
+        }
+        MediaRow row = rows.get(0);
+        if (!row.owner().equals(authorId)) {
+            throw ApiException.notFound();
+        }
+        if (!"READY".equals(row.status())) {
+            throw new ApiException(HttpStatus.CONFLICT, "media_not_ready", "Изображение ещё не готово", List.of(), null);
+        }
+        if (!MediaLinkType.POST_ATTACHMENT.accepts(row.purpose())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "purpose_mismatch", "Файл не подходит для публикации", List.of(), null);
+        }
+        if (row.attached() > 0) {
+            throw new ApiException(HttpStatus.CONFLICT, "attachment_in_use",
+                    "Изображение уже используется в другой публикации", List.of(), null);
+        }
+    }
+
+    /** Различает «не найдено/чужое» от «не черновик» и от конфликта версии, когда UPDATE не задел ни одной строки. */
+    private void diagnoseUpdateFailure(UUID postId, UUID authorId) {
+        List<String> status = jdbc.query(
+                "SELECT status FROM posts WHERE id = ? AND author_id = ? AND deleted_at IS NULL",
+                (rs, n) -> rs.getString("status"), postId, authorId);
+        if (status.isEmpty()) {
+            throw ApiException.notFound();
+        }
+        if (!"DRAFT".equals(status.get(0))) {
+            throw new ApiException(HttpStatus.CONFLICT, "not_draft", "Действие доступно только для черновика", List.of(), null);
+        }
+        throw new ApiException(HttpStatus.CONFLICT, "version_conflict", "Черновик изменён в другом месте", List.of(), null);
+    }
+
+    /** Различает «не найдено/чужое» от «нельзя удалить опубликованную запись этим способом». */
+    private void diagnoseDeleteFailure(UUID postId, UUID authorId) {
+        List<String> status = jdbc.query(
+                "SELECT status FROM posts WHERE id = ? AND author_id = ? AND deleted_at IS NULL",
+                (rs, n) -> rs.getString("status"), postId, authorId);
+        if (status.isEmpty()) {
+            throw ApiException.notFound();
+        }
+        throw new ApiException(HttpStatus.CONFLICT, "not_draft",
+                "Удалить так можно только черновик или отложенную запись", List.of(), null);
+    }
+
+    private record MediaRow(UUID owner, String status, String purpose, boolean deleted, long attached) {
+    }
+
+    private record Row(UUID id, String body, String status, UUID groupId, long version, Instant createdAt, Instant updatedAt) {
+    }
+
+    private static final org.springframework.jdbc.core.RowMapper<Row> ROW_MAPPER = (rs, n) -> new Row(
+            UUID.fromString(rs.getString("id")),
+            rs.getString("body"),
+            rs.getString("status"),
+            rs.getObject("group_id") == null ? null : UUID.fromString(rs.getString("group_id")),
+            rs.getLong("version"),
+            rs.getTimestamp("created_at").toInstant(),
+            rs.getTimestamp("updated_at").toInstant());
+
+    private record Keyset(Instant at, UUID id) {
+    }
+
+    private static String encode(Instant at, UUID id) {
+        return Base64.getUrlEncoder().withoutPadding()
+                .encodeToString((at.toString() + "|" + id).getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static Keyset decode(String cursor) {
+        if (cursor == null || cursor.isBlank()) {
+            return null;
+        }
+        try {
+            String raw = new String(Base64.getUrlDecoder().decode(cursor.trim()), StandardCharsets.UTF_8);
+            int separator = raw.indexOf('|');
+            return new Keyset(Instant.parse(raw.substring(0, separator)), UUID.fromString(raw.substring(separator + 1)));
+        } catch (RuntimeException malformed) {
+            throw ApiException.badRequest("invalid_cursor", "Курсор страницы некорректен");
+        }
+    }
+}

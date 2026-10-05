@@ -12,7 +12,9 @@ public enum MediaLinkType {
     CHAT_ATTACHMENT(Set.of(MediaPurpose.CHAT_IMAGE, MediaPurpose.CHAT_DOCUMENT), false),
     /** Аватар и обложка сообщества (не группового чата): назначение проверяет CommunityService, не клиент. */
     COMMUNITY_AVATAR(Set.of(MediaPurpose.AVATAR), false),
-    COMMUNITY_COVER(Set.of(MediaPurpose.COVER), false);
+    COMMUNITY_COVER(Set.of(MediaPurpose.COVER), false),
+    /** Изображение публикации: назначение и принадлежность проверяет PostService, не клиент. */
+    POST_ATTACHMENT(Set.of(MediaPurpose.POST_IMAGE), false);
 
     private final Set<MediaPurpose> purposes;
     private final boolean clientAttachable;

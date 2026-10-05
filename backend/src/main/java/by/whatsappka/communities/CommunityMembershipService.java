@@ -136,6 +136,16 @@ public class CommunityMembershipService {
         }, groupId);
     }
 
+    /**
+     * Для других функциональных модулей (публикации и т.п.): состоит ли пользователь в существующем,
+     * не удалённом сообществе. Несуществующее или удалённое сообщество — {@link ApiException#notFound()}.
+     */
+    @Transactional(readOnly = true)
+    public boolean isActiveMember(UUID groupId, UUID userId) {
+        CommunityRow group = requireRow(groupId);
+        return group.ownerId().equals(userId) || roleOf(group, userId) != null;
+    }
+
     private void lock(UUID groupId) {
         jdbc.query(CommunitySql.LOCK_GROUP, rs -> { }, groupId);
     }
