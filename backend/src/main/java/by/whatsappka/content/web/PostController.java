@@ -1,5 +1,6 @@
 package by.whatsappka.content.web;
 
+import by.whatsappka.content.PostSchedulingService;
 import by.whatsappka.content.PostService;
 import by.whatsappka.content.PostService.PostSummary;
 import by.whatsappka.content.PostService.PostView;
@@ -11,6 +12,7 @@ import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.ApiV1Controller;
 import by.whatsappka.platform.web.CursorPage;
 import com.fasterxml.jackson.databind.JsonNode;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -26,7 +28,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
-/** CRUD публикаций (TASK-041) и немедленная публикация (TASK-042). Расписание — отдельная задача. */
+/** CRUD публикаций (TASK-041), немедленная публикация (TASK-042) и расписание (TASK-043). */
 @ApiV1Controller
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class PostController {
@@ -34,10 +36,12 @@ public class PostController {
     private static final String PUBLISH_OPERATION = "post.publish";
 
     private final PostService posts;
+    private final PostSchedulingService scheduling;
     private final IdempotencyRecords idempotency;
 
-    public PostController(PostService posts, IdempotencyRecords idempotency) {
+    public PostController(PostService posts, PostSchedulingService scheduling, IdempotencyRecords idempotency) {
         this.posts = posts;
+        this.scheduling = scheduling;
         this.idempotency = idempotency;
     }
 
@@ -88,6 +92,22 @@ public class PostController {
                 .body(result.body());
     }
 
+    @PostMapping("/posts/{id}/schedule")
+    public ResponseEntity<Void> schedule(
+            @PathVariable("id") UUID id,
+            @RequestBody ScheduleRequest request,
+            @AuthenticationPrincipal AuthenticatedUser viewer
+    ) {
+        scheduling.schedule(id, viewer.userId(), request.publishAt());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/posts/{id}/schedule/cancel")
+    public ResponseEntity<Void> cancelSchedule(@PathVariable("id") UUID id, @AuthenticationPrincipal AuthenticatedUser viewer) {
+        scheduling.cancelSchedule(id, viewer.userId());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/me/post-drafts")
     public CursorPage<PostSummary> drafts(
             @RequestParam(name = "cursor", required = false) String cursor,
@@ -101,6 +121,9 @@ public class PostController {
     }
 
     public record UpdateRequest(String body, List<UUID> media, long version) {
+    }
+
+    public record ScheduleRequest(Instant publishAt) {
     }
 
     public record PostRef(UUID id) {

@@ -67,4 +67,14 @@ final class BackgroundJobSql {
                 lease_owner = NULL, lease_until = NULL, updated_at = now()
             WHERE id = ? AND status = 'FAILED'
             """;
+
+    /** Снимает ещё не взятое в работу задание — освобождает ключ для новой постановки (отмена расписания). */
+    static final String CANCEL_QUEUED = """
+            DELETE FROM background_jobs WHERE dedup_key = ? AND status = 'QUEUED'
+            """;
+
+    /** Снимает уже завершённую запись (DONE/FAILED), чтобы её ключ можно было использовать заново. */
+    static final String CLEAR_FINISHED = """
+            DELETE FROM background_jobs WHERE dedup_key = ? AND status IN ('DONE', 'FAILED')
+            """;
 }

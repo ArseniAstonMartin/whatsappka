@@ -42,12 +42,15 @@ public class PostService {
         this.clock = clock;
     }
 
-    public record PostSummary(UUID id, String body, String status, UUID groupId, long version, Instant updatedAt) {
+    public record PostSummary(
+            UUID id, String body, String status, UUID groupId, long version,
+            Instant updatedAt, String scheduleFailureReason
+    ) {
     }
 
     public record PostView(
             UUID id, String body, String status, UUID groupId, List<UUID> mediaIds,
-            long version, Instant createdAt, Instant updatedAt
+            long version, Instant createdAt, Instant updatedAt, String scheduleFailureReason
     ) {
     }
 
@@ -75,7 +78,7 @@ public class PostService {
         List<UUID> media = rawMedia == null ? List.of() : rawMedia;
         PostRules.validateMedia(media);
         int updated = jdbc.update(
-                "UPDATE posts SET body = ?, version = version + 1, updated_at = ? "
+                "UPDATE posts SET body = ?, version = version + 1, updated_at = ?, schedule_failure_reason = NULL "
                         + "WHERE id = ? AND author_id = ? AND status IN ('DRAFT', 'PUBLISHED') AND deleted_at IS NULL AND version = ?",
                 body, Timestamp.from(clock.instant()), postId, authorId, expectedVersion);
         if (updated == 0) {
@@ -115,8 +118,8 @@ public class PostService {
         }
         Instant now = clock.instant();
         int updated = jdbc.update(
-                "UPDATE posts SET status = 'PUBLISHED', published_at = ?, version = version + 1, updated_at = ? "
-                        + "WHERE id = ? AND author_id = ? AND status = 'DRAFT'",
+                "UPDATE posts SET status = 'PUBLISHED', published_at = ?, version = version + 1, updated_at = ?, "
+                        + "schedule_failure_reason = NULL WHERE id = ? AND author_id = ? AND status = 'DRAFT'",
                 Timestamp.from(now), Timestamp.from(now), postId, authorId);
         if (updated == 0) {
             throw new ApiException(HttpStatus.CONFLICT, "not_draft", "Публиковать можно только черновик", List.of(), null);
@@ -139,7 +142,7 @@ public class PostService {
     @Transactional(readOnly = true)
     public PostView get(UUID postId, UUID authorId) {
         List<Row> rows = jdbc.query(
-                "SELECT id, body, status, group_id, version, created_at, updated_at FROM posts "
+                "SELECT id, body, status, group_id, version, created_at, updated_at, schedule_failure_reason FROM posts "
                         + "WHERE id = ? AND author_id = ? AND deleted_at IS NULL",
                 ROW_MAPPER, postId, authorId);
         if (rows.isEmpty()) {
@@ -150,7 +153,7 @@ public class PostService {
                 "SELECT media_id FROM post_media WHERE post_id = ? ORDER BY position",
                 (rs, n) -> UUID.fromString(rs.getString("media_id")), postId);
         return new PostView(row.id(), row.body(), row.status(), row.groupId(), mediaIds,
-                row.version(), row.createdAt(), row.updatedAt());
+                row.version(), row.createdAt(), row.updatedAt(), row.scheduleFailureReason());
     }
 
     /** Свои черновики и отложенные записи, от недавно изменённых. Опубликованные сюда не попадают. */
@@ -159,17 +162,18 @@ public class PostService {
         int size = PageSize.limit(limit);
         Keyset key = decode(cursor);
         List<Row> rows = key == null
-                ? jdbc.query("SELECT id, body, status, group_id, version, created_at, updated_at FROM posts "
+                ? jdbc.query("SELECT id, body, status, group_id, version, created_at, updated_at, schedule_failure_reason FROM posts "
                         + "WHERE author_id = ? AND status IN ('DRAFT', 'SCHEDULED') AND deleted_at IS NULL "
                         + "ORDER BY updated_at DESC, id DESC LIMIT ?", ROW_MAPPER, authorId, size + 1)
-                : jdbc.query("SELECT id, body, status, group_id, version, created_at, updated_at FROM posts "
+                : jdbc.query("SELECT id, body, status, group_id, version, created_at, updated_at, schedule_failure_reason FROM posts "
                         + "WHERE author_id = ? AND status IN ('DRAFT', 'SCHEDULED') AND deleted_at IS NULL "
                         + "AND (updated_at, id) < (?, ?) ORDER BY updated_at DESC, id DESC LIMIT ?",
                         ROW_MAPPER, authorId, Timestamp.from(key.at()), key.id(), size + 1);
         boolean more = rows.size() > size;
         List<Row> shown = more ? rows.subList(0, size) : rows;
         List<PostSummary> items = shown.stream()
-                .map(row -> new PostSummary(row.id(), row.body(), row.status(), row.groupId(), row.version(), row.updatedAt()))
+                .map(row -> new PostSummary(row.id(), row.body(), row.status(), row.groupId(), row.version(),
+                        row.updatedAt(), row.scheduleFailureReason()))
                 .toList();
         String next = more ? encode(shown.get(shown.size() - 1).updatedAt(), shown.get(shown.size() - 1).id()) : null;
         return new CursorPage<>(items, next, more);
@@ -238,7 +242,10 @@ public class PostService {
     private record PublishRow(UUID groupId, String body, String status) {
     }
 
-    private record Row(UUID id, String body, String status, UUID groupId, long version, Instant createdAt, Instant updatedAt) {
+    private record Row(
+            UUID id, String body, String status, UUID groupId, long version,
+            Instant createdAt, Instant updatedAt, String scheduleFailureReason
+    ) {
     }
 
     private static final org.springframework.jdbc.core.RowMapper<Row> ROW_MAPPER = (rs, n) -> new Row(
@@ -248,7 +255,8 @@ public class PostService {
             rs.getObject("group_id") == null ? null : UUID.fromString(rs.getString("group_id")),
             rs.getLong("version"),
             rs.getTimestamp("created_at").toInstant(),
-            rs.getTimestamp("updated_at").toInstant());
+            rs.getTimestamp("updated_at").toInstant(),
+            rs.getString("schedule_failure_reason"));
 
     private record Keyset(Instant at, UUID id) {
     }

@@ -43,6 +43,19 @@ public class JobQueue {
         return jdbc.update(BackgroundJobSql.OPERATOR_RETRY, jobId) == 1;
     }
 
+    /** Отмена: снимает ещё не взятое в работу задание с этим ключом. Активное (RUNNING) не трогает. */
+    public void cancel(String dedupKey) {
+        jdbc.update(BackgroundJobSql.CANCEL_QUEUED, dedupKey);
+    }
+
+    /**
+     * Снимает завершённую запись (DONE/FAILED) с этим ключом, чтобы повторная постановка того же дела
+     * не упёрлась в уникальность dedup_key. Активное (RUNNING) не трогает.
+     */
+    public void clearFinished(String dedupKey) {
+        jdbc.update(BackgroundJobSql.CLEAR_FINISHED, dedupKey);
+    }
+
     private String toJson(Object payload) {
         try {
             return mapper.writeValueAsString(payload);
