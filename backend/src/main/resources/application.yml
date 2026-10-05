@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: whatsappka
+  profiles:
+    default: backend
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/whatsappka}
+    username: ${DB_USERNAME:whatsappka}
+    password: ${DB_PASSWORD:}
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USERNAME:}
+      password: ${REDIS_PASSWORD:}
+
+whatsappka:
+  media:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    region: ${MINIO_REGION:us-east-1}
+    bucket: ${MINIO_BUCKET:whatsappka-media}
+    access-key: ${MINIO_ACCESS_KEY:}
+    secret-key: ${MINIO_SECRET_KEY:}
