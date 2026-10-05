@@ -76,4 +76,10 @@ public class UserAccount {
     public void recordActivity(Instant now) {
         this.lastActiveAt = now;
     }
+
+    public void markEmailVerified(Instant now) {
+        if (emailVerifiedAt == null) {
+            emailVerifiedAt = now;
+        }
+    }
 }

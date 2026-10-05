@@ -11,6 +11,7 @@ import by.whatsappka.identity.token.AccessTokenIssuer;
 import by.whatsappka.identity.token.AccessTokenVerifier;
 import by.whatsappka.platform.web.ApiException;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class SessionService {
 
+    static final Duration SESSION_LIFETIME = Duration.ofDays(30);
     private static final String BEARER = "Bearer ";
 
     private final AuthSessionRepository sessions;
@@ -47,6 +49,17 @@ public class SessionService {
         this.accessTokens = accessTokens;
         this.accessTokenVerifier = accessTokenVerifier;
         this.clock = clock;
+    }
+
+    /** Открывает новую сессию для уже проверенного пользователя: сессия, refresh-токен (в БД хеш) и access JWT. */
+    @Transactional
+    public Opened open(UserAccount user, String deviceLabel) {
+        Instant now = clock.instant();
+        Instant absoluteExpiry = now.plus(SESSION_LIFETIME);
+        AuthSession session = sessions.save(new AuthSession(UUID.randomUUID(), user.id(), absoluteExpiry, deviceLabel, now));
+        String refreshToken = RefreshTokens.generate();
+        refreshTokens.save(new RefreshToken(UUID.randomUUID(), session.id(), RefreshTokens.hash(refreshToken), absoluteExpiry, now));
+        return new Opened(accessTokens.issue(user.id(), session.id()), refreshToken, absoluteExpiry);
     }
 
     /**
@@ -140,6 +153,9 @@ public class SessionService {
                 List.of(),
                 null
         );
+    }
+
+    public record Opened(String accessToken, String refreshToken, Instant refreshExpiresAt) {
     }
 
     public record Rotation(UserAccount user, String accessToken, String refreshToken, Instant refreshExpiresAt) {

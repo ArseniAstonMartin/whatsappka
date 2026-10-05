@@ -2,16 +2,9 @@ package by.whatsappka.identity;
 
 import by.whatsappka.identity.account.UserAccount;
 import by.whatsappka.identity.account.UserAccountRepository;
-import by.whatsappka.identity.session.AuthSession;
-import by.whatsappka.identity.session.AuthSessionRepository;
-import by.whatsappka.identity.session.RefreshToken;
-import by.whatsappka.identity.session.RefreshTokenRepository;
-import by.whatsappka.identity.session.RefreshTokens;
-import by.whatsappka.identity.token.AccessTokenIssuer;
 import by.whatsappka.platform.web.ApiException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
@@ -23,35 +16,28 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Вход по email и паролю: сессия, refresh-токен (в БД хеш) и access JWT. */
+/** Вход по email и паролю. Сессию открывает {@link SessionService}. */
 @Service
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class AuthenticationService {
 
-    static final Duration SESSION_LIFETIME = Duration.ofDays(30);
     private static final String INVALID_CREDENTIALS = "Неверный email или пароль";
 
     private final UserAccountRepository users;
-    private final AuthSessionRepository sessions;
-    private final RefreshTokenRepository refreshTokens;
+    private final SessionService sessions;
     private final PasswordEncoder passwordEncoder;
-    private final AccessTokenIssuer accessTokens;
     private final Clock clock;
     private final String absentUserHash;
 
     public AuthenticationService(
             UserAccountRepository users,
-            AuthSessionRepository sessions,
-            RefreshTokenRepository refreshTokens,
+            SessionService sessions,
             PasswordEncoder passwordEncoder,
-            AccessTokenIssuer accessTokens,
             Clock clock
     ) {
         this.users = users;
         this.sessions = sessions;
-        this.refreshTokens = refreshTokens;
         this.passwordEncoder = passwordEncoder;
-        this.accessTokens = accessTokens;
         this.clock = clock;
         // Хеш-заглушка выравнивает время ответа, когда аккаунта с таким email нет.
         this.absentUserHash = passwordEncoder.encode(UUID.randomUUID().toString());
@@ -72,15 +58,9 @@ public class AuthenticationService {
             throw new ApiException(HttpStatus.FORBIDDEN, "account_disabled", "Аккаунт отключён", List.of(), null);
         }
 
-        Instant now = clock.instant();
-        Instant absoluteExpiry = now.plus(SESSION_LIFETIME);
-        AuthSession session = sessions.save(new AuthSession(UUID.randomUUID(), user.id(), absoluteExpiry, deviceLabel, now));
-        String refreshToken = RefreshTokens.generate();
-        refreshTokens.save(new RefreshToken(UUID.randomUUID(), session.id(), RefreshTokens.hash(refreshToken), absoluteExpiry, now));
-        user.recordActivity(now);
-
-        String accessToken = accessTokens.issue(user.id(), session.id());
-        return new LoginResult(user, accessToken, refreshToken, absoluteExpiry);
+        user.recordActivity(clock.instant());
+        SessionService.Opened opened = sessions.open(user, deviceLabel);
+        return new LoginResult(user, opened.accessToken(), opened.refreshToken(), opened.refreshExpiresAt());
     }
 
     private static ApiException invalidCredentials() {

@@ -44,6 +44,9 @@ public class SecurityConfiguration {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/auth/google/start",
+                                "/api/v1/auth/google/callback").permitAll()
                         .requestMatchers("/error", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/moderation/**").hasAnyRole("MODERATOR", "ADMIN")

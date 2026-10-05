@@ -1,5 +1,6 @@
 package by.whatsappka.identity;
 
+import by.whatsappka.identity.oauth.GoogleOAuthProperties;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -9,7 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@EnableConfigurationProperties({IdentityProperties.class, BootstrapAdminProperties.class})
+@EnableConfigurationProperties({IdentityProperties.class, BootstrapAdminProperties.class, GoogleOAuthProperties.class})
 public class IdentityConfiguration {
 
     @Bean
