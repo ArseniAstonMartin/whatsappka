@@ -9,7 +9,10 @@ public enum MediaLinkType {
     PROFILE_COVER(Set.of(MediaPurpose.COVER), true),
     GROUP_AVATAR(Set.of(MediaPurpose.AVATAR), true),
     /** Ставится только отправкой сообщения: назначение и принадлежность проверяет отправка. */
-    CHAT_ATTACHMENT(Set.of(MediaPurpose.CHAT_IMAGE, MediaPurpose.CHAT_DOCUMENT), false);
+    CHAT_ATTACHMENT(Set.of(MediaPurpose.CHAT_IMAGE, MediaPurpose.CHAT_DOCUMENT), false),
+    /** Аватар и обложка сообщества (не группового чата): назначение проверяет CommunityService, не клиент. */
+    COMMUNITY_AVATAR(Set.of(MediaPurpose.AVATAR), false),
+    COMMUNITY_COVER(Set.of(MediaPurpose.COVER), false);
 
     private final Set<MediaPurpose> purposes;
     private final boolean clientAttachable;
