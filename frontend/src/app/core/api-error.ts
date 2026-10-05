@@ -55,7 +55,13 @@ const MESSAGES: Record<string, string> = {
   comment_deleted: 'Комментарий удалён',
   already_deleted: 'Комментарий уже удалён',
   invalid_reaction_type: 'Неизвестный тип реакции',
+  not_found: 'Объект не найден',
 };
+
+/** Тот же словарь кодов, которым пользуется {@link toProblem} — для ошибок не из HTTP (например, STOMP). */
+export function messageForCode(code: string): string {
+  return MESSAGES[code] ?? 'Не удалось выполнить действие. Попробуйте позже.';
+}
 
 export function toProblem(error: unknown): ApiProblem {
   if (!(error instanceof HttpErrorResponse)) {
@@ -73,7 +79,7 @@ export function toProblem(error: unknown): ApiProblem {
   return {
     status: error.status,
     code,
-    message: MESSAGES[code] ?? 'Не удалось выполнить действие. Попробуйте позже.',
+    message: messageForCode(code),
     fields,
   };
 }

@@ -35,7 +35,7 @@
       </div>
     }
 
-    @if (messages().length === 0) {
+    @if (messages().length === 0 && pending().length === 0) {
       <app-state-panel kind="empty" title="Сообщений пока нет" message="Здесь появится история диалога." />
     } @else {
       <ol class="messages">
@@ -48,13 +48,75 @@
                 <p class="text">{{ message.body }}</p>
               }
               @for (attachment of message.attachments; track attachment.mediaId) {
-                <p class="attachment">{{ purposeLabel(attachment.purpose) }}</p>
+                <app-media-view
+                  [mediaId]="attachment.mediaId"
+                  [kind]="attachmentKind(attachment.purpose)"
+                  [variant]="attachmentKind(attachment.purpose) === 'image' ? '1280' : null"
+                  [fallbackToOriginal]="true"
+                  [label]="purposeLabel(attachment.purpose)"
+                />
               }
             }
             <time class="time" [attr.datetime]="message.createdAt">{{ time(message.createdAt) }}</time>
           </li>
         }
+        @for (item of pending(); track item.clientMessageId) {
+          <li class="msg own" [class.sending]="item.status === 'pending'" [class.failed]="item.status === 'error'">
+            @if (item.body) {
+              <p class="text">{{ item.body }}</p>
+            }
+            @for (attachment of item.attachments; track attachment.mediaId) {
+              <app-media-view
+                [mediaId]="attachment.mediaId"
+                [kind]="attachmentKind(attachment.purpose)"
+                [variant]="attachmentKind(attachment.purpose) === 'image' ? '1280' : null"
+                [fallbackToOriginal]="true"
+                [label]="purposeLabel(attachment.purpose)"
+              />
+            }
+            <div class="status-row">
+              <span class="status-left">
+                @if (item.status === 'pending') {
+                  <span class="status" role="status">Отправка…</span>
+                } @else if (item.status === 'error') {
+                  <span class="status error" role="alert">{{ item.errorText }}</span>
+                  <button type="button" appButton variant="ghost" (click)="retry(item.clientMessageId)">Повторить</button>
+                }
+              </span>
+              <time class="time" [attr.datetime]="item.createdAt">{{ time(item.createdAt) }}</time>
+            </div>
+          </li>
+        }
       </ol>
     }
   </div>
+
+  @if (!chat.blocked) {
+    <div class="composer">
+      @if (attachSlots().length > 0) {
+        <div class="slots">
+          @for (slot of attachSlots(); track slot.slotId) {
+            <div class="slot">
+              <app-media-upload [purpose]="slot.purpose" (ready)="onSlotReady(slot.slotId, $event)" (removed)="removeSlot(slot.slotId)" />
+              <button type="button" appButton variant="ghost" aria-label="Убрать вложение" (click)="removeSlot(slot.slotId)">
+                Убрать
+              </button>
+            </div>
+          }
+        </div>
+      }
+      <form class="compose-form" (ngSubmit)="send()" novalidate>
+        <app-text-field [formControl]="textControl" label="Сообщение" [multiline]="true" [maxLength]="4000" />
+        <div class="compose-actions">
+          <button type="button" appButton variant="ghost" [disabled]="!canAddAttachment()" (click)="addSlot('CHAT_IMAGE')">
+            Фото
+          </button>
+          <button type="button" appButton variant="ghost" [disabled]="!canAddAttachment()" (click)="addSlot('CHAT_DOCUMENT')">
+            Документ
+          </button>
+          <button type="submit" appButton [disabled]="!canSend()">Отправить</button>
+        </div>
+      </form>
+    </div>
+  }
 }
