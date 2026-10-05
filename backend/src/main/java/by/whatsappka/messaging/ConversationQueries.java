@@ -32,7 +32,8 @@ public class ConversationQueries {
             String otherUsername,
             String otherDisplayName,
             boolean blocked,
-            LastMessage lastMessage
+            LastMessage lastMessage,
+            long unread
     ) {
     }
 
@@ -48,7 +49,8 @@ public class ConversationQueries {
             rs.getString("username"),
             rs.getString("display_name"),
             rs.getBoolean("blocked"),
-            lastMessage(rs));
+            lastMessage(rs),
+            rs.getLong("unread"));
 
     private static LastMessage lastMessage(ResultSet rs) throws SQLException {
         if (rs.getObject("last_seq") == null) {

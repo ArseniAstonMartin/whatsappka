@@ -46,6 +46,7 @@ final class ConversationSql {
      * Список личных диалогов пользователя. Диалог доступен, пока пользователь участник и собеседник активен.
      * Блокировка не скрывает историю: она возвращается флагом blocked, а отправку запрещает отправляющий путь.
      * Превью — последнее видимое участнику неудалённое сообщение (после начала его интервала).
+     * Счётчик unread — непрочитанные чужие неудалённые сообщения.
      */
     private static final String LIST_COLUMNS = """
             SELECT c.id, c.updated_at, u.id AS other_id, u.username, p.display_name,
@@ -53,7 +54,7 @@ final class ConversationSql {
                            WHERE (b.blocker_id = m.user_id AND b.blocked_id = u.id)
                               OR (b.blocker_id = u.id AND b.blocked_id = m.user_id)) AS blocked,
                    lm.seq AS last_seq, lm.body AS last_body, lm.sender_id AS last_sender_id,
-                   lm.created_at AS last_created_at
+                   lm.created_at AS last_created_at, ur.unread
             FROM conversation_memberships m
             JOIN conversations c ON c.id = m.conversation_id AND c.type = 'DIRECT'
             JOIN direct_conversations d ON d.conversation_id = c.id
@@ -66,6 +67,13 @@ final class ConversationSql {
                 ORDER BY msg.seq DESC
                 LIMIT 1
             ) lm ON true
+            LEFT JOIN LATERAL (
+                SELECT count(*) AS unread FROM messages msg
+                WHERE msg.conversation_id = c.id
+                  AND msg.seq > GREATEST(m.last_read_seq, m.joined_seq)
+                  AND msg.sender_id <> m.user_id
+                  AND msg.deleted_at IS NULL
+            ) ur ON true
             WHERE m.user_id = ? AND m.left_at IS NULL AND u.status = 'ACTIVE'
             """;
 

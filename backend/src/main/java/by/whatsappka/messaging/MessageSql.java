@@ -151,4 +151,46 @@ final class MessageSql {
             ORDER BY e.event_seq
             LIMIT ?
             """;
+
+    /**
+     * Прочтение. Прогресс только растёт (GREATEST) и не выходит за последний существующий seq чата (LEAST).
+     * Возвращает новое значение; 0 строк — участника нет.
+     */
+    static final String READ_UPDATE = """
+            UPDATE conversation_memberships m
+            SET last_read_seq = GREATEST(m.last_read_seq,
+                    LEAST(?, COALESCE((SELECT max(msg.seq) FROM messages msg WHERE msg.conversation_id = m.conversation_id), 0)))
+            WHERE m.conversation_id = ? AND m.user_id = ? AND m.left_at IS NULL
+            RETURNING m.last_read_seq
+            """;
+
+    /**
+     * Непрочитанные для участника: сообщения после начала интервала и после прочитанного, чужие и не удалённые.
+     */
+    static final String UNREAD_FOR_MEMBER = """
+            SELECT m.last_read_seq,
+                   (SELECT count(*) FROM messages msg
+                    WHERE msg.conversation_id = m.conversation_id
+                      AND msg.seq > GREATEST(m.last_read_seq, m.joined_seq)
+                      AND msg.sender_id <> m.user_id
+                      AND msg.deleted_at IS NULL) AS unread
+            FROM conversation_memberships m
+            WHERE m.conversation_id = ? AND m.user_id = ? AND m.left_at IS NULL
+            """;
+
+    /**
+     * Сколько прочитало сообщение среди тех, кто имел к нему доступ в момент отправки (кроме автора).
+     * Участник имел доступ, если сообщение пришло после его входа и не после его выхода.
+     */
+    static final String READ_STATUS = """
+            SELECT count(*) FILTER (WHERE m.last_read_seq >= msg.seq) AS read_by,
+                   count(*) AS eligible
+            FROM messages msg
+            JOIN conversation_memberships m
+              ON m.conversation_id = msg.conversation_id
+             AND m.user_id <> msg.sender_id
+             AND m.joined_seq < msg.seq
+             AND (m.left_seq IS NULL OR m.left_seq >= msg.seq)
+            WHERE msg.id = ? AND msg.conversation_id = ?
+            """;
 }
