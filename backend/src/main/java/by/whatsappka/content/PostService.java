@@ -2,6 +2,7 @@ package by.whatsappka.content;
 
 import by.whatsappka.communities.CommunityMembershipService;
 import by.whatsappka.media.access.MediaLinkType;
+import by.whatsappka.platform.outbox.OutboxWriter;
 import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.CursorPage;
 import by.whatsappka.platform.web.PageSize;
@@ -11,6 +12,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
@@ -19,20 +21,24 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * CRUD черновиков публикаций (TASK-041). Автор работает только со своими записями; публикация,
- * расписание, хештеги, лента, комментарии и реакции того же эпика — отдельные задачи.
+ * CRUD публикаций и немедленная публикация (TASK-041, TASK-042). Автор работает только со своими
+ * записями; расписание, хештеги, лента, комментарии и реакции того же эпика — отдельные задачи.
  */
 @Service
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class PostService {
 
+    static final String EVENT_PUBLISHED = "post.published";
+
     private final JdbcTemplate jdbc;
     private final CommunityMembershipService communities;
+    private final OutboxWriter outbox;
     private final Clock clock;
 
-    public PostService(JdbcTemplate jdbc, CommunityMembershipService communities, Clock clock) {
+    public PostService(JdbcTemplate jdbc, CommunityMembershipService communities, OutboxWriter outbox, Clock clock) {
         this.jdbc = jdbc;
         this.communities = communities;
+        this.outbox = outbox;
         this.clock = clock;
     }
 
@@ -62,6 +68,7 @@ public class PostService {
         return id;
     }
 
+    /** Правка доступна для черновика и уже опубликованной записи; published_at при этом не трогается. */
     @Transactional
     public void update(UUID postId, UUID authorId, long expectedVersion, String rawBody, List<UUID> rawMedia) {
         String body = PostRules.normalizeBody(rawBody);
@@ -69,7 +76,7 @@ public class PostService {
         PostRules.validateMedia(media);
         int updated = jdbc.update(
                 "UPDATE posts SET body = ?, version = version + 1, updated_at = ? "
-                        + "WHERE id = ? AND author_id = ? AND status = 'DRAFT' AND deleted_at IS NULL AND version = ?",
+                        + "WHERE id = ? AND author_id = ? AND status IN ('DRAFT', 'PUBLISHED') AND deleted_at IS NULL AND version = ?",
                 body, Timestamp.from(clock.instant()), postId, authorId, expectedVersion);
         if (updated == 0) {
             diagnoseUpdateFailure(postId, authorId);
@@ -79,14 +86,53 @@ public class PostService {
         attach(postId, authorId, media);
     }
 
+    /**
+     * Публикация: DRAFT → PUBLISHED, атомарно через CAS по статусу — конкурентный повторный вызов
+     * не задевает ни одной строки и получает 409, второй публикации не возникает.
+     */
+    @Transactional
+    public void publish(UUID postId, UUID authorId) {
+        List<PublishRow> rows = jdbc.query(
+                "SELECT group_id, body, status FROM posts WHERE id = ? AND author_id = ? AND deleted_at IS NULL",
+                (rs, n) -> new PublishRow(
+                        rs.getObject("group_id") == null ? null : UUID.fromString(rs.getString("group_id")),
+                        rs.getString("body"), rs.getString("status")),
+                postId, authorId);
+        if (rows.isEmpty()) {
+            throw ApiException.notFound();
+        }
+        PublishRow row = rows.get(0);
+        if (!"DRAFT".equals(row.status())) {
+            throw new ApiException(HttpStatus.CONFLICT, "not_draft", "Публиковать можно только черновик", List.of(), null);
+        }
+        Boolean hasMedia = jdbc.queryForObject("SELECT count(*) > 0 FROM post_media WHERE post_id = ?", Boolean.class, postId);
+        if ((row.body() == null || row.body().isBlank()) && !Boolean.TRUE.equals(hasMedia)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "empty_post",
+                    "Нужен текст или хотя бы одно готовое изображение", List.of(), null);
+        }
+        if (row.groupId() != null && !communities.isActiveMember(row.groupId(), authorId)) {
+            throw ApiException.forbidden();
+        }
+        Instant now = clock.instant();
+        int updated = jdbc.update(
+                "UPDATE posts SET status = 'PUBLISHED', published_at = ?, version = version + 1, updated_at = ? "
+                        + "WHERE id = ? AND author_id = ? AND status = 'DRAFT'",
+                Timestamp.from(now), Timestamp.from(now), postId, authorId);
+        if (updated == 0) {
+            throw new ApiException(HttpStatus.CONFLICT, "not_draft", "Публиковать можно только черновик", List.of(), null);
+        }
+        outbox.record("post", postId, EVENT_PUBLISHED, Map.of("postId", postId.toString(), "authorId", authorId.toString()));
+    }
+
+    /** Удаление не ограничено статусом: своя запись в любом состоянии пропадает из обычной выдачи. */
     @Transactional
     public void delete(UUID postId, UUID authorId) {
         int updated = jdbc.update(
                 "UPDATE posts SET deleted_at = ?, version = version + 1, updated_at = ? "
-                        + "WHERE id = ? AND author_id = ? AND status IN ('DRAFT', 'SCHEDULED') AND deleted_at IS NULL",
+                        + "WHERE id = ? AND author_id = ? AND deleted_at IS NULL",
                 Timestamp.from(clock.instant()), Timestamp.from(clock.instant()), postId, authorId);
         if (updated == 0) {
-            diagnoseDeleteFailure(postId, authorId);
+            throw ApiException.notFound();
         }
     }
 
@@ -171,7 +217,7 @@ public class PostService {
         }
     }
 
-    /** Различает «не найдено/чужое» от «не черновик» и от конфликта версии, когда UPDATE не задел ни одной строки. */
+    /** Различает «не найдено/чужое» от «сейчас недоступно для правки» и от конфликта версии. */
     private void diagnoseUpdateFailure(UUID postId, UUID authorId) {
         List<String> status = jdbc.query(
                 "SELECT status FROM posts WHERE id = ? AND author_id = ? AND deleted_at IS NULL",
@@ -179,25 +225,17 @@ public class PostService {
         if (status.isEmpty()) {
             throw ApiException.notFound();
         }
-        if (!"DRAFT".equals(status.get(0))) {
-            throw new ApiException(HttpStatus.CONFLICT, "not_draft", "Действие доступно только для черновика", List.of(), null);
+        if (!List.of("DRAFT", "PUBLISHED").contains(status.get(0))) {
+            throw new ApiException(HttpStatus.CONFLICT, "edit_not_allowed",
+                    "Запись сейчас недоступна для редактирования", List.of(), null);
         }
-        throw new ApiException(HttpStatus.CONFLICT, "version_conflict", "Черновик изменён в другом месте", List.of(), null);
-    }
-
-    /** Различает «не найдено/чужое» от «нельзя удалить опубликованную запись этим способом». */
-    private void diagnoseDeleteFailure(UUID postId, UUID authorId) {
-        List<String> status = jdbc.query(
-                "SELECT status FROM posts WHERE id = ? AND author_id = ? AND deleted_at IS NULL",
-                (rs, n) -> rs.getString("status"), postId, authorId);
-        if (status.isEmpty()) {
-            throw ApiException.notFound();
-        }
-        throw new ApiException(HttpStatus.CONFLICT, "not_draft",
-                "Удалить так можно только черновик или отложенную запись", List.of(), null);
+        throw new ApiException(HttpStatus.CONFLICT, "version_conflict", "Запись изменена в другом месте", List.of(), null);
     }
 
     private record MediaRow(UUID owner, String status, String purpose, boolean deleted, long attached) {
+    }
+
+    private record PublishRow(UUID groupId, String body, String status) {
     }
 
     private record Row(UUID id, String body, String status, UUID groupId, long version, Instant createdAt, Instant updatedAt) {

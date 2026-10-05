@@ -4,8 +4,13 @@ import by.whatsappka.content.PostService;
 import by.whatsappka.content.PostService.PostSummary;
 import by.whatsappka.content.PostService.PostView;
 import by.whatsappka.identity.security.AuthenticatedUser;
+import by.whatsappka.platform.idempotency.IdempotencyRecords;
+import by.whatsappka.platform.idempotency.IdempotentResponse;
+import by.whatsappka.platform.idempotency.IdempotentResult;
+import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.ApiV1Controller;
 import by.whatsappka.platform.web.CursorPage;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -18,17 +23,22 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 
-/** CRUD черновиков публикаций (TASK-041). Немедленная публикация и расписание — отдельные задачи. */
+/** CRUD публикаций (TASK-041) и немедленная публикация (TASK-042). Расписание — отдельная задача. */
 @ApiV1Controller
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class PostController {
 
-    private final PostService posts;
+    private static final String PUBLISH_OPERATION = "post.publish";
 
-    public PostController(PostService posts) {
+    private final PostService posts;
+    private final IdempotencyRecords idempotency;
+
+    public PostController(PostService posts, IdempotencyRecords idempotency) {
         this.posts = posts;
+        this.idempotency = idempotency;
     }
 
     @PostMapping("/posts")
@@ -56,6 +66,26 @@ public class PostController {
     public ResponseEntity<Void> delete(@PathVariable("id") UUID id, @AuthenticationPrincipal AuthenticatedUser viewer) {
         posts.delete(id, viewer.userId());
         return ResponseEntity.noContent().build();
+    }
+
+    /** Idempotency-Key защищает от двойной публикации при повторе запроса после разрыва связи. */
+    @PostMapping("/posts/{id}/publish")
+    public ResponseEntity<JsonNode> publish(
+            @PathVariable("id") UUID id,
+            @RequestHeader(value = "Idempotency-Key", required = false) String key,
+            @AuthenticationPrincipal AuthenticatedUser viewer
+    ) {
+        if (key == null) {
+            throw ApiException.badRequest("bad_request", "Заголовок Idempotency-Key обязателен");
+        }
+        IdempotentResult result = idempotency.execute(viewer.userId(), PUBLISH_OPERATION, key,
+                IdempotencyRecords.utf8(id.toString()), () -> {
+                    posts.publish(id, viewer.userId());
+                    return new IdempotentResponse(HttpStatus.OK.value(), new PostRef(id));
+                });
+        return ResponseEntity.status(result.status())
+                .header("Idempotent-Replayed", String.valueOf(result.replayed()))
+                .body(result.body());
     }
 
     @GetMapping("/me/post-drafts")
