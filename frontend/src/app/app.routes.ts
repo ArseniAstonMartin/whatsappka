@@ -36,8 +36,17 @@ export const routes: Routes = [
       {
         path: 'groups',
         title: 'Группы',
-        loadComponent: section,
-        data: { heading: 'Группы', kind: 'empty', title: 'Групп пока нет', message: 'Здесь будут каталог сообществ и ваши группы.' },
+        loadComponent: () => import('./features/communities/community-catalog/community-catalog').then((m) => m.CommunityCatalog),
+      },
+      {
+        path: 'groups/new',
+        title: 'Новое сообщество',
+        loadComponent: () => import('./features/communities/community-create/community-create').then((m) => m.CommunityCreate),
+      },
+      {
+        path: 'groups/:slug',
+        title: 'Сообщество',
+        loadComponent: () => import('./features/communities/community-detail/community-detail').then((m) => m.CommunityDetail),
       },
       {
         path: 'chats',

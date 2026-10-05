@@ -130,6 +130,15 @@ public class CommunityJoinRequestService {
                 Map.of("groupId", groupId.toString(), "requestId", requestId.toString(), "requesterId", row.requesterId().toString()));
     }
 
+    /** Своя ожидающая заявка в это сообщество, если она есть — чтобы экран мог предложить отмену. */
+    @Transactional(readOnly = true)
+    public UUID myPending(UUID groupId, UUID requesterId) {
+        List<UUID> rows = jdbc.query(
+                "SELECT id FROM group_join_requests WHERE group_id = ? AND requester_id = ? AND status = 'PENDING'",
+                (rs, n) -> UUID.fromString(rs.getString("id")), groupId, requesterId);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
     /** Список ожидающих заявок виден только OWNER/ADMIN; обычным участникам и посторонним — нет. */
     @Transactional(readOnly = true)
     public List<Request> pending(UUID groupId, UUID viewerId) {

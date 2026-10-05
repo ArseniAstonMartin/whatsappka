@@ -37,6 +37,12 @@ const MESSAGES: Record<string, string> = {
   invalid_cursor: 'Не удалось открыть эту часть списка. Обновите страницу.',
   self_chat: 'Нельзя написать самому себе.',
   interaction_blocked: 'Отправка недоступна: между вами блокировка.',
+  already_member: 'Вы уже состоите в сообществе',
+  private_group: 'Сообщество приватно, нужна заявка на вступление',
+  public_group: 'Открытое сообщество не требует заявки',
+  request_pending: 'Заявка уже ожидает решения',
+  join_request_cooldown: 'Повторная заявка возможна не раньше чем через 24 часа после отказа',
+  request_closed: 'Заявка уже закрыта',
 };
 
 export function toProblem(error: unknown): ApiProblem {

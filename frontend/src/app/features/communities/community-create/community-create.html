@@ -1,0 +1,40 @@
+<h1 class="heading">Новое сообщество</h1>
+<app-card>
+  <form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <app-text-field
+      formControlName="slug"
+      label="Адрес сообщества"
+      hint="От 3 до 60 символов: латиница, цифры и дефис, не на краях"
+      [errorText]="errorFor('slug')"
+    />
+    <app-text-field formControlName="name" label="Название" [errorText]="errorFor('name')" />
+    <app-text-field
+      formControlName="description"
+      label="Описание"
+      [multiline]="true"
+      [maxLength]="2000"
+      [hint]="descriptionLength() + ' / 2000'"
+      [errorText]="errorFor('description')"
+    />
+    <fieldset class="visibility">
+      <legend>Видимость</legend>
+      <label>
+        <input type="radio" formControlName="visibility" value="PUBLIC" />
+        Открытое — виден каталог и состав, вступление без заявки
+      </label>
+      <label>
+        <input type="radio" formControlName="visibility" value="PRIVATE" />
+        Приватное — вступление только по заявке или приглашению
+      </label>
+    </fieldset>
+    @if (formMessage()) {
+      <p class="form-error" role="alert">{{ formMessage() }}</p>
+    }
+    <div class="actions">
+      <a routerLink="/groups" appButton variant="ghost">Отмена</a>
+      <button type="submit" appButton [busy]="saving()" [disabled]="saving()">
+        {{ saving() ? 'Создаём…' : 'Создать сообщество' }}
+      </button>
+    </div>
+  </form>
+</app-card>

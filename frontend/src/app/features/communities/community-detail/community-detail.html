@@ -1,0 +1,132 @@
+@if (loading()) {
+  <div class="stack" aria-busy="true">
+    <app-skeleton width="100%" height="140px" />
+    <app-skeleton width="40%" height="24px" />
+  </div>
+} @else if (notFound()) {
+  <app-state-panel kind="not-found" title="Сообщество не найдено" message="Возможно, ссылка неверна или сообщество удалено." />
+} @else if (error()) {
+  <app-state-panel kind="error" title="Не удалось загрузить сообщество" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="load()">Повторить</button>
+  </app-state-panel>
+} @else if (view(); as v) {
+  <div class="cover">
+    @if (v.coverMediaId) {
+      <app-media-view [mediaId]="v.coverMediaId" variant="1280" [fallbackToOriginal]="true" [label]="'Обложка сообщества'" />
+    }
+  </div>
+
+  <div class="identity">
+    <div class="avatar">
+      @if (v.avatarMediaId) {
+        <app-media-view [mediaId]="v.avatarMediaId" variant="320" shape="circle" [fallbackToOriginal]="true" [label]="'Аватар: ' + v.name" />
+      } @else {
+        <app-avatar [name]="v.name" [size]="96" />
+      }
+    </div>
+    <div class="names">
+      <h1 class="name">{{ v.name }}</h1>
+      <p class="meta">
+        {{ v.visibility === 'PUBLIC' ? 'Открытое сообщество' : 'Приватное сообщество' }}
+        @if (!v.restricted) {
+          · {{ v.memberCount }} {{ v.memberCount === 1 ? 'участник' : 'участников' }}
+        }
+        @if (roleLabel(); as role) {
+          · {{ role }}
+        }
+      </p>
+    </div>
+  </div>
+
+  @if (v.restricted) {
+    <app-state-panel kind="forbidden" title="Приватное сообщество" message="Описание и состав видны только участникам." />
+  } @else if (v.description) {
+    <p class="description">{{ v.description }}</p>
+  }
+
+  @if (v.viewerRole === null) {
+    <div class="actions">
+      @if (v.visibility === 'PUBLIC') {
+        <button type="button" appButton [busy]="joinBusy()" [disabled]="joinBusy()" (click)="join()">Вступить</button>
+      } @else if (myRequestId()) {
+        <span class="pending">Заявка на рассмотрении</span>
+        <button type="button" appButton variant="ghost" [busy]="joinBusy()" [disabled]="joinBusy()" (click)="cancelRequest()">
+          Отменить заявку
+        </button>
+      } @else {
+        <button type="button" appButton [busy]="joinBusy()" [disabled]="joinBusy()" (click)="requestJoin()">Подать заявку</button>
+      }
+    </div>
+  }
+
+  @if (v.viewerRole === 'OWNER') {
+    <div class="actions">
+      <button type="button" appButton variant="secondary" [attr.aria-expanded]="editing()" (click)="toggleEdit()">
+        {{ editing() ? 'Закрыть настройки' : 'Настройки сообщества' }}
+      </button>
+    </div>
+
+    @if (editing()) {
+      <app-card>
+        <h2 class="section-title">Данные сообщества</h2>
+        <form class="form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+          <app-text-field formControlName="name" label="Название" [errorText]="errorFor('name')" />
+          <app-text-field
+            formControlName="description"
+            label="Описание"
+            [multiline]="true"
+            [maxLength]="2000"
+            [hint]="descriptionLength() + ' / 2000'"
+            [errorText]="errorFor('description')"
+          />
+          <fieldset class="visibility">
+            <legend>Видимость</legend>
+            <label>
+              <input type="radio" formControlName="visibility" value="PUBLIC" />
+              Открытое
+            </label>
+            <label>
+              <input type="radio" formControlName="visibility" value="PRIVATE" />
+              Приватное
+            </label>
+          </fieldset>
+          @if (formMessage()) {
+            <p class="form-error" role="alert">{{ formMessage() }}</p>
+          }
+          <div class="form-actions">
+            <button type="submit" appButton [busy]="saving()" [disabled]="saving()">
+              {{ saving() ? 'Сохраняем…' : 'Сохранить' }}
+            </button>
+          </div>
+        </form>
+      </app-card>
+
+      <app-card>
+        <h2 class="section-title">Фото</h2>
+        <div class="photos">
+          <section aria-labelledby="avatar-title">
+            <h3 id="avatar-title" class="sub-title">Аватар</h3>
+            <app-media-upload purpose="AVATAR" (ready)="attach('avatar', $event)" />
+          </section>
+          <section aria-labelledby="cover-title">
+            <h3 id="cover-title" class="sub-title">Обложка</h3>
+            <app-media-upload purpose="COVER" (ready)="attach('cover', $event)" />
+          </section>
+        </div>
+      </app-card>
+
+      <app-card>
+        <h2 class="section-title">Опасная зона</h2>
+        <p class="hint">Удаление закрывает сообщество для всех участников и не отменяется из интерфейса.</p>
+        <button type="button" appButton variant="danger" [busy]="removing()" [disabled]="removing()" (click)="remove()">
+          Удалить сообщество
+        </button>
+      </app-card>
+    }
+  }
+
+  <section class="posts" aria-labelledby="posts-title">
+    <h2 id="posts-title" class="section-title">Публикации</h2>
+    <app-state-panel kind="empty" title="Публикаций пока нет" message="Лента сообщества появится, когда подключится API публикаций." />
+  </section>
+}

@@ -1,0 +1,61 @@
+<div class="toolbar">
+  <h1 class="heading">Сообщества</h1>
+  <a routerLink="/groups/new" appButton variant="primary">Создать сообщество</a>
+</div>
+
+<div class="tabs" role="tablist" aria-label="Сообщества">
+  <button type="button" role="tab" [attr.aria-selected]="tab() === 'catalog'" [class.active]="tab() === 'catalog'" (click)="selectTab('catalog')">
+    Каталог
+  </button>
+  <button type="button" role="tab" [attr.aria-selected]="tab() === 'mine'" [class.active]="tab() === 'mine'" (click)="selectTab('mine')">
+    Мои группы
+  </button>
+</div>
+
+@if (loading()) {
+  <div class="stack" aria-busy="true">
+    <app-skeleton width="100%" height="56px" />
+    <app-skeleton width="100%" height="56px" />
+  </div>
+} @else if (error()) {
+  <app-state-panel kind="error" title="Не удалось загрузить список" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="tab() === 'catalog' ? start() : selectTab('mine')">Повторить</button>
+  </app-state-panel>
+} @else if (tab() === 'catalog') {
+  @if (items().length === 0) {
+    <app-state-panel kind="empty" title="Сообществ пока нет" message="Будьте первым, кто создаст сообщество." />
+  } @else {
+    <ul class="list">
+      @for (group of items(); track group.id) {
+        <li class="row">
+          <a class="link" [routerLink]="['/groups', group.slug]">
+            <span class="name">{{ group.name }}</span>
+            <span class="visibility">{{ visibilityLabel(group.visibility) }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+    @if (hasMore()) {
+      <div class="more">
+        <button type="button" appButton variant="secondary" [busy]="loadingMore()" [disabled]="loadingMore()" (click)="loadMore()">
+          {{ loadingMore() ? 'Загружаем…' : 'Загрузить ещё' }}
+        </button>
+      </div>
+    }
+  }
+} @else {
+  @if (!mineItems() || mineItems()!.length === 0) {
+    <app-state-panel kind="empty" title="Вы ещё не состоите в сообществах" message="Найдите сообщество в каталоге или создайте своё." />
+  } @else {
+    <ul class="list">
+      @for (group of mineItems(); track group.id) {
+        <li class="row">
+          <a class="link" [routerLink]="['/groups', group.slug]">
+            <span class="name">{{ group.name }}</span>
+            <span class="visibility">{{ visibilityLabel(group.visibility) }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  }
+}

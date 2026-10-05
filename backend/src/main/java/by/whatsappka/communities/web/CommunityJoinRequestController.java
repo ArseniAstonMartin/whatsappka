@@ -66,6 +66,12 @@ public class CommunityJoinRequestController {
         return requests.pending(id, viewer.userId());
     }
 
+    @GetMapping("/groups/{id}/join-requests/mine")
+    public ResponseEntity<RequestRef> mine(@PathVariable("id") UUID id, @AuthenticationPrincipal AuthenticatedUser viewer) {
+        UUID requestId = requests.myPending(id, viewer.userId());
+        return requestId == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(new RequestRef(requestId));
+    }
+
     public record RequestRef(UUID id) {
     }
 }
