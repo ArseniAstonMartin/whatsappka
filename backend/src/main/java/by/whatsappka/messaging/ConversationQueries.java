@@ -24,6 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class ConversationQueries {
 
+    /**
+     * {@code type} различает DIRECT и GROUP: у личного диалога заполнены {@code other*}, у группового —
+     * {@code title}/{@code avatarMediaId}, остальные поля общие для обоих типов.
+     */
     public record ConversationView(
             UUID id,
             String type,
@@ -31,6 +35,8 @@ public class ConversationQueries {
             UUID otherId,
             String otherUsername,
             String otherDisplayName,
+            String title,
+            UUID avatarMediaId,
             boolean blocked,
             LastMessage lastMessage,
             long unread
@@ -43,11 +49,13 @@ public class ConversationQueries {
 
     private static final RowMapper<ConversationView> ROW = (rs, n) -> new ConversationView(
             UUID.fromString(rs.getString("id")),
-            "DIRECT",
+            rs.getString("conv_type"),
             rs.getTimestamp("updated_at").toInstant(),
-            UUID.fromString(rs.getString("other_id")),
+            rs.getObject("other_id") == null ? null : UUID.fromString(rs.getString("other_id")),
             rs.getString("username"),
             rs.getString("display_name"),
+            rs.getString("title"),
+            rs.getObject("avatar_media_id") == null ? null : UUID.fromString(rs.getString("avatar_media_id")),
             rs.getBoolean("blocked"),
             lastMessage(rs),
             rs.getLong("unread"));

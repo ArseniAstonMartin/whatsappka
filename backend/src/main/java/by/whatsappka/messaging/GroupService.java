@@ -31,6 +31,7 @@ public class GroupService {
     static final String EVENT_ROLE_CHANGED = "role.changed";
     static final String EVENT_OWNER_TRANSFERRED = "owner.transferred";
     static final String EVENT_AVATAR_CHANGED = "avatar.changed";
+    static final String EVENT_TITLE_CHANGED = "title.changed";
 
     private static final int TITLE_MAX = 100;
 
@@ -130,10 +131,22 @@ public class GroupService {
     public void changeAvatar(UUID conversationId, UUID actorId, UUID mediaId) {
         lock(conversationId);
         Role actor = requireMember(conversationId, actorId);
-        if (actor != Role.OWNER && actor != Role.ADMIN) {
+        if (!GroupRules.canEditSettings(actor)) {
             throw ApiException.forbidden();
         }
         setAvatar(conversationId, actorId, mediaId);
+    }
+
+    @Transactional
+    public void rename(UUID conversationId, UUID actorId, String rawTitle) {
+        lock(conversationId);
+        Role actor = requireMember(conversationId, actorId);
+        if (!GroupRules.canEditSettings(actor)) {
+            throw ApiException.forbidden();
+        }
+        String title = normalizeTitle(rawTitle);
+        jdbc.update(GroupSql.SET_TITLE, title, conversationId);
+        event(conversationId, EVENT_TITLE_CHANGED, actorId, null);
     }
 
     private void setAvatar(UUID conversationId, UUID actorId, UUID mediaId) {

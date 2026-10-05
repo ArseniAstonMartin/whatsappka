@@ -1,0 +1,44 @@
+<section class="section" aria-labelledby="chat-invitations-title">
+  <h2 id="chat-invitations-title" class="title">Приглашения в чаты</h2>
+  @if (loading()) {
+    <app-skeleton width="100%" height="56px" />
+  } @else if (error()) {
+    <app-state-panel kind="error" title="Не удалось загрузить приглашения" [message]="error()!">
+      <button type="button" appButton variant="secondary" (click)="load()">Повторить</button>
+    </app-state-panel>
+  } @else if (items().length === 0) {
+    <app-state-panel kind="empty" title="Приглашений нет" message="" />
+  } @else {
+    <ul class="list">
+      @for (invitation of items(); track invitation.id) {
+        <li class="row">
+          <span class="who">
+            <span class="name">{{ invitation.conversationTitle }}</span>
+            <span class="expires">до {{ expiresLabel(invitation.expiresAt) }}</span>
+          </span>
+          <span class="row-actions">
+            <button
+              type="button"
+              appButton
+              [busy]="isBusy(invitation.id)"
+              [disabled]="isBusy(invitation.id)"
+              (click)="accept(invitation)"
+            >
+              Принять
+            </button>
+            <button
+              type="button"
+              appButton
+              variant="secondary"
+              [busy]="isBusy(invitation.id)"
+              [disabled]="isBusy(invitation.id)"
+              (click)="decline(invitation)"
+            >
+              Отклонить
+            </button>
+          </span>
+        </li>
+      }
+    </ul>
+  }
+</section>

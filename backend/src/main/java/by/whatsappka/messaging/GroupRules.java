@@ -30,6 +30,11 @@ public final class GroupRules {
         return actor == Role.OWNER;
     }
 
+    /** Название и аватар меняют владелец и администраторы. */
+    public static boolean canEditSettings(Role actor) {
+        return actor == Role.OWNER || actor == Role.ADMIN;
+    }
+
     /** Владелец не выходит, пока не передал владение или не закрыл чат. */
     public static boolean canLeave(Role actor) {
         return actor != Role.OWNER;

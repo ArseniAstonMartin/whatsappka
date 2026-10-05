@@ -1,0 +1,15 @@
+<h1 class="heading">Новый групповой чат</h1>
+<app-card>
+  <form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <app-text-field formControlName="title" label="Название" [errorText]="errorFor()" />
+    @if (formMessage()) {
+      <p class="form-error" role="alert">{{ formMessage() }}</p>
+    }
+    <div class="actions">
+      <a routerLink="/chats" appButton variant="ghost">Отмена</a>
+      <button type="submit" appButton [busy]="saving()" [disabled]="saving()">
+        {{ saving() ? 'Создаём…' : 'Создать чат' }}
+      </button>
+    </div>
+  </form>
+</app-card>

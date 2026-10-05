@@ -1,0 +1,133 @@
+@if (loading()) {
+  <div class="stack" aria-busy="true">
+    <app-skeleton width="50%" height="28px" />
+    <app-skeleton width="100%" height="120px" />
+  </div>
+} @else if (notFound()) {
+  <app-state-panel kind="not-found" title="Чат не найден" message="Это не групповой чат или вы больше не участник." />
+} @else if (error()) {
+  <app-state-panel kind="error" title="Не удалось загрузить настройки" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="load()">Повторить</button>
+  </app-state-panel>
+} @else if (conversation(); as chat) {
+  <header class="head">
+    <a class="back" [routerLink]="['/chats', id()]">Назад к чату</a>
+    <div class="identity">
+      @if (chat.avatarMediaId) {
+        <app-media-view [mediaId]="chat.avatarMediaId" variant="320" shape="circle" [fallbackToOriginal]="true" [label]="'Аватар: ' + chat.title" />
+      } @else {
+        <app-avatar [name]="chat.title ?? 'Чат'" [size]="56" />
+      }
+      <h1 class="title">{{ chat.title }}</h1>
+    </div>
+  </header>
+
+  @if (canLeave()) {
+    <div class="actions">
+      <button type="button" appButton variant="ghost" [busy]="leaving()" [disabled]="leaving()" (click)="leave()">
+        Покинуть чат
+      </button>
+    </div>
+  }
+
+  @if (canEditSettings()) {
+    <app-card>
+      <h2 class="section-title">Название</h2>
+      <form class="form" [formGroup]="titleForm" (ngSubmit)="rename()" novalidate>
+        <app-text-field formControlName="title" label="Название чата" [errorText]="renameError()" />
+        <div class="form-actions">
+          <button type="submit" appButton [busy]="renaming()" [disabled]="renaming()">Сохранить</button>
+        </div>
+      </form>
+    </app-card>
+
+    <app-card>
+      <h2 class="section-title">Аватар</h2>
+      <app-media-upload purpose="AVATAR" (ready)="changeAvatar($event)" />
+    </app-card>
+
+    <app-card>
+      <h2 class="section-title">Пригласить</h2>
+      <form class="form" [formGroup]="inviteForm" (ngSubmit)="invite()" novalidate>
+        <app-text-field formControlName="username" label="Имя пользователя" [errorText]="inviteError()" />
+        <div class="form-actions">
+          <button type="submit" appButton [busy]="inviteBusy()" [disabled]="inviteBusy()">Пригласить</button>
+        </div>
+      </form>
+    </app-card>
+  }
+
+  <app-card>
+    <h2 class="section-title">Участники</h2>
+    @if (membersLoading()) {
+      <app-skeleton width="100%" height="48px" />
+    } @else if (membersError()) {
+      <app-state-panel kind="error" title="Не удалось загрузить состав" [message]="membersError()!" />
+    } @else {
+      <ul class="list">
+        @for (member of members(); track member.id) {
+          <li class="row">
+            <span class="who">
+              <span class="name">{{ member.displayName }}</span>
+              <span class="username">&#64;{{ member.username }}</span>
+            </span>
+            <span class="role-badge">{{ roleLabel(member.role) }}</span>
+            @if (canEditSettings()) {
+              <span class="row-actions">
+                @if (canChangeRole(member)) {
+                  @if (member.role === 'ADMIN') {
+                    <button
+                      type="button"
+                      appButton
+                      variant="secondary"
+                      [busy]="isMemberBusy(member.id)"
+                      [disabled]="isMemberBusy(member.id)"
+                      (click)="setRole(member, 'MEMBER')"
+                    >
+                      Снять администратора
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      appButton
+                      variant="secondary"
+                      [busy]="isMemberBusy(member.id)"
+                      [disabled]="isMemberBusy(member.id)"
+                      (click)="setRole(member, 'ADMIN')"
+                    >
+                      Сделать администратором
+                    </button>
+                  }
+                }
+                @if (canTransferTo(member)) {
+                  <button
+                    type="button"
+                    appButton
+                    variant="secondary"
+                    [busy]="isMemberBusy(member.id)"
+                    [disabled]="isMemberBusy(member.id)"
+                    (click)="transferOwnership(member)"
+                  >
+                    Передать владение
+                  </button>
+                }
+                @if (canRemove(member)) {
+                  <button
+                    type="button"
+                    appButton
+                    variant="danger"
+                    [busy]="isMemberBusy(member.id)"
+                    [disabled]="isMemberBusy(member.id)"
+                    (click)="removeMember(member)"
+                  >
+                    Исключить
+                  </button>
+                }
+              </span>
+            }
+          </li>
+        }
+      </ul>
+    }
+  </app-card>
+}

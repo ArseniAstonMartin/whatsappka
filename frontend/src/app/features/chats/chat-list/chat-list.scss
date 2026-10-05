@@ -4,6 +4,14 @@
   align-content: start;
 }
 
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .heading {
   margin: 0;
   font-size: var(--font-size-h2);
@@ -63,6 +71,15 @@
 
 .row:hover {
   background: var(--color-primary-soft);
+}
+
+.row app-media-view,
+.row app-avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-avatar);
+  overflow: hidden;
 }
 
 .row.active {

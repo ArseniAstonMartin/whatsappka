@@ -18,6 +18,19 @@
   flex-wrap: wrap;
 }
 
+.dialog-head app-media-view,
+.dialog-head app-avatar {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-avatar);
+  overflow: hidden;
+}
+
+.settings-link {
+  flex-shrink: 0;
+}
+
 .back {
   color: var(--color-primary);
   min-height: var(--touch-target);
@@ -28,6 +41,7 @@
 .who {
   display: grid;
   min-width: 0;
+  flex: 1;
 }
 
 .name {
@@ -123,6 +137,13 @@
 
 .status.error {
   color: var(--color-danger);
+}
+
+.sender {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
 }
 
 .text {

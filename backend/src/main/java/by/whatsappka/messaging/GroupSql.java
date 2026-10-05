@@ -64,6 +64,10 @@ final class GroupSql {
             UPDATE conversations SET avatar_media_id = ?, version = version + 1, updated_at = now() WHERE id = ?
             """;
 
+    static final String SET_TITLE = """
+            UPDATE conversations SET title = ?, version = version + 1, updated_at = now() WHERE id = ?
+            """;
+
     static final String LIST_MEMBERS = """
             SELECT u.id, u.username, p.display_name, m.role
             FROM conversation_memberships m

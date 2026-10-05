@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -86,7 +87,20 @@ public class GroupController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/conversations/{id}")
+    public ResponseEntity<Void> rename(
+            @PathVariable("id") UUID id,
+            @RequestBody RenameRequest request,
+            @AuthenticationPrincipal AuthenticatedUser viewer
+    ) {
+        groups.rename(id, viewer.userId(), request.title());
+        return ResponseEntity.noContent().build();
+    }
+
     public record CreateGroupRequest(String title, UUID avatarMediaId) {
+    }
+
+    public record RenameRequest(String title) {
     }
 
     public record GroupRef(UUID id) {

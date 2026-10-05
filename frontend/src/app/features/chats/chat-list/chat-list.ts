@@ -1,24 +1,28 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { filter } from 'rxjs';
 import { ChatService, Conversation } from '../../../core/chat.service';
 import { toProblem } from '../../../core/api-error';
 import { AppButton } from '../../../shared/ui/button/app-button';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { StatePanel } from '../../../shared/state-panel/state-panel';
+import { MediaView } from '../../../shared/media/media-view/media-view';
 
 /**
- * Личные диалоги пользователя страницами. Фильтр работает только по уже загруженным чатам и по имени собеседника:
- * это не поиск по сообщениям, поэтому подсказка говорит об этом прямо.
+ * Личные диалоги и групповые чаты пользователя страницами (TASK-062). Фильтр работает только по уже
+ * загруженным чатам и по названию/имени собеседника: это не поиск по сообщениям, подсказка говорит об этом прямо.
  */
 @Component({
   selector: 'app-chat-list',
-  imports: [AppButton, Avatar, Skeleton, StatePanel, RouterLink, RouterLinkActive],
+  imports: [AppButton, Avatar, MediaView, Skeleton, StatePanel, RouterLink, RouterLinkActive],
   templateUrl: './chat-list.html',
   styleUrl: './chat-list.scss',
 })
 export class ChatList implements OnInit {
   private readonly chats = inject(ChatService);
+  private readonly router = inject(Router);
 
   protected readonly items = signal<Conversation[]>([]);
   protected readonly nextCursor = signal<string | null>(null);
@@ -33,13 +37,20 @@ export class ChatList implements OnInit {
     if (!needle) {
       return this.items();
     }
-    return this.items().filter(
-      (chat) =>
-        chat.otherDisplayName.toLowerCase().includes(needle) || chat.otherUsername.toLowerCase().includes(needle),
-    );
+    return this.items().filter((chat) => this.displayName(chat).toLowerCase().includes(needle));
   });
 
   private loadingToken = 0;
+
+  constructor() {
+    /** Возврат к списку (например, после выхода из группового чата) перечитывает его — локального кеша нет. */
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd && event.urlAfterRedirects === '/chats'),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => void this.start());
+  }
 
   ngOnInit(): void {
     void this.start();
@@ -85,6 +96,14 @@ export class ChatList implements OnInit {
     } finally {
       this.loadingMore.set(false);
     }
+  }
+
+  protected displayName(chat: Conversation): string {
+    return chat.type === 'GROUP' ? (chat.title ?? 'Групповой чат') : (chat.otherDisplayName ?? '');
+  }
+
+  protected avatarId(chat: Conversation): string | null {
+    return chat.type === 'GROUP' ? chat.avatarMediaId : null;
   }
 
   protected preview(chat: Conversation): string {

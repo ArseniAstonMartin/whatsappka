@@ -76,7 +76,17 @@ export const routes: Routes = [
             path: '',
             pathMatch: 'full',
             loadComponent: section,
-            data: { heading: 'Сообщения', kind: 'empty', title: 'Выберите диалог', message: 'Слева — ваши личные диалоги. Групповые чаты появятся здесь позже.' },
+            data: { heading: 'Сообщения', kind: 'empty', title: 'Выберите диалог', message: 'Слева — личные диалоги и групповые чаты.' },
+          },
+          {
+            path: 'new-group',
+            title: 'Новый групповой чат',
+            loadComponent: () => import('./features/chats/group-chat-create/group-chat-create').then((m) => m.GroupChatCreate),
+          },
+          {
+            path: ':id/settings',
+            title: 'Настройки чата',
+            loadComponent: () => import('./features/chats/group-chat-settings/group-chat-settings').then((m) => m.GroupChatSettings),
           },
           {
             path: ':id',

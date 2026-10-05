@@ -10,14 +10,21 @@ export interface LastMessage {
   createdAt: string;
 }
 
-/** Личный диалог в списке. unread — непрочитанные чужие неудалённые сообщения. */
+export type ConversationType = 'DIRECT' | 'GROUP';
+
+/**
+ * Диалог в списке — личный или групповой. unread — непрочитанные чужие неудалённые сообщения.
+ * У DIRECT заполнены other*, у GROUP — title/avatarMediaId; блокировка — понятие только личного диалога.
+ */
 export interface Conversation {
   id: string;
-  type: string;
+  type: ConversationType;
   lastActivityAt: string;
-  otherId: string;
-  otherUsername: string;
-  otherDisplayName: string;
+  otherId: string | null;
+  otherUsername: string | null;
+  otherDisplayName: string | null;
+  title: string | null;
+  avatarMediaId: string | null;
   blocked: boolean;
   lastMessage: LastMessage | null;
   unread: number;

@@ -1,19 +1,20 @@
 <header class="head">
   <h1 class="heading">Сообщения</h1>
+  <a routerLink="/chats/new-group" appButton variant="secondary">Новый групповой чат</a>
 </header>
 
 <div class="filter">
-  <label class="filter-label" for="chat-filter">Фильтр по имени</label>
+  <label class="filter-label" for="chat-filter">Фильтр по названию</label>
   <input
     id="chat-filter"
     class="filter-input"
     type="search"
     autocomplete="off"
-    placeholder="Имя или логин собеседника"
+    placeholder="Имя собеседника или название чата"
     [value]="query()"
     (input)="query.set($any($event.target).value)"
   />
-  <p class="filter-hint">Фильтр ищет только среди загруженных чатов по имени собеседника. Поиск по сообщениям появится в разделе «Поиск».</p>
+  <p class="filter-hint">Фильтр ищет только среди загруженных чатов. Поиск по сообщениям появится в разделе «Поиск».</p>
 </div>
 
 @if (loading()) {
@@ -26,7 +27,7 @@
     <button type="button" appButton variant="secondary" (click)="start()">Повторить</button>
   </app-state-panel>
 } @else if (items().length === 0) {
-  <app-state-panel kind="empty" title="Диалогов пока нет" message="Откройте профиль пользователя и нажмите «Написать»." />
+  <app-state-panel kind="empty" title="Диалогов пока нет" message="Откройте профиль пользователя и нажмите «Написать», либо создайте групповой чат." />
 } @else if (visible().length === 0) {
   <app-state-panel kind="empty" title="Ничего не найдено" message="Среди загруженных чатов нет совпадений." />
   @if (hasMore()) {
@@ -38,11 +39,15 @@
   <ul class="list">
     @for (chat of visible(); track chat.id) {
       <li>
-        <a class="row" [routerLink]="['/chats', chat.id]" routerLinkActive="active" [attr.aria-label]="chat.otherDisplayName + (chat.unread ? ', непрочитанных: ' + chat.unread : '')">
-          <app-avatar [name]="chat.otherDisplayName" [size]="40" />
+        <a class="row" [routerLink]="['/chats', chat.id]" routerLinkActive="active" [attr.aria-label]="displayName(chat) + (chat.unread ? ', непрочитанных: ' + chat.unread : '')">
+          @if (avatarId(chat); as avatarMediaId) {
+            <app-media-view [mediaId]="avatarMediaId" variant="320" shape="circle" [fallbackToOriginal]="true" [label]="'Аватар: ' + displayName(chat)" />
+          } @else {
+            <app-avatar [name]="displayName(chat)" [size]="40" />
+          }
           <span class="body">
             <span class="title-line">
-              <span class="name">{{ chat.otherDisplayName }}</span>
+              <span class="name">{{ displayName(chat) }}</span>
               @if (chat.blocked) {
                 <span class="flag">заблокирован</span>
               }

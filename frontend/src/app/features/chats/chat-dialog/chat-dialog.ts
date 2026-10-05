@@ -14,6 +14,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ChatMessage, ChatService, Conversation } from '../../../core/chat.service';
+import { GroupChatService } from '../../../core/group-chat.service';
 import { ProfileService } from '../../../core/profile.service';
 import { RealtimeEvent, RealtimeService } from '../../../core/realtime/realtime.service';
 import { toProblem, messageForCode } from '../../../core/api-error';
@@ -66,9 +67,9 @@ interface FailedPayload {
 }
 
 /**
- * История личного диалога и отправка сообщений (TASK-061). Сервер отдаёт страницы от новых к старым;
- * здесь они выводятся снизу вверх. Подгрузка более старых страниц сохраняет место просмотра: высота,
- * добавленная сверху, компенсируется прокруткой.
+ * История диалога — личного или группового (TASK-061, TASK-062) — и отправка сообщений. Сервер отдаёт
+ * страницы от новых к старым; здесь они выводятся снизу вверх. Подгрузка более старых страниц сохраняет
+ * место просмотра: высота, добавленная сверху, компенсируется прокруткой.
  *
  * <p>Отправленное сообщение сперва живёт в {@link pending} с локальным client_message_id; подтверждение
  * (`message.saved`) переносит его в {@link messages} как единственный пузырь — второй не появляется.
@@ -83,6 +84,7 @@ interface FailedPayload {
 })
 export class ChatDialog {
   private readonly chats = inject(ChatService);
+  private readonly groupChats = inject(GroupChatService);
   private readonly profiles = inject(ProfileService);
   private readonly realtime = inject(RealtimeService);
   private readonly injector = inject(Injector);
@@ -92,6 +94,7 @@ export class ChatDialog {
   protected readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
 
   protected readonly conversation = signal<Conversation | null>(null);
+  protected readonly memberNames = signal<Record<string, string>>({});
   protected readonly messages = signal<ChatMessage[]>([]);
   protected readonly pending = signal<PendingMessage[]>([]);
   protected readonly nextCursor = signal<string | null>(null);
@@ -140,6 +143,9 @@ export class ChatDialog {
       this.messages.set(oldestFirst(page.items));
       this.nextCursor.set(page.nextCursor);
       this.hasMore.set(page.hasMore);
+      if (conversation.type === 'GROUP') {
+        void this.loadMemberNames(conversationId);
+      }
       afterNextRender(() => this.scrollToEnd(), { injector: this.injector });
     } catch (error) {
       if (token !== this.loadToken) {
@@ -193,6 +199,30 @@ export class ChatDialog {
 
   protected isOwn(message: ChatMessage): boolean {
     return message.senderId === this.selfId();
+  }
+
+  /** Имя отправителя подписывается только в групповом чате — в личном диалоге собеседник один. */
+  protected senderName(message: ChatMessage): string | null {
+    if (this.conversation()?.type !== 'GROUP' || this.isOwn(message)) {
+      return null;
+    }
+    return this.memberNames()[message.senderId] ?? null;
+  }
+
+  private async loadMemberNames(conversationId: string): Promise<void> {
+    try {
+      const members = await this.groupChats.members(conversationId);
+      if (conversationId !== this.id()) {
+        return;
+      }
+      const names: Record<string, string> = {};
+      for (const member of members) {
+        names[member.id] = member.displayName;
+      }
+      this.memberNames.set(names);
+    } catch {
+      // имена отправителей — необязательное удобство; сообщения всё равно читаемы без подписи
+    }
   }
 
   protected purposeLabel(purpose: string): string {

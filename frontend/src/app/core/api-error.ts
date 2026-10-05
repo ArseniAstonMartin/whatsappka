@@ -56,6 +56,13 @@ const MESSAGES: Record<string, string> = {
   already_deleted: 'Комментарий уже удалён',
   invalid_reaction_type: 'Неизвестный тип реакции',
   not_found: 'Объект не найден',
+  chat_full: 'В чате уже максимальное число участников',
+  owner_must_transfer: 'Сначала передайте владение, затем выходите из чата',
+  self_invite: 'Нельзя пригласить самого себя',
+  invitation_pending: 'Приглашение уже ожидает ответа',
+  invitation_closed: 'Приглашение уже закрыто',
+  invitation_expired: 'Срок приглашения истёк',
+  inviter_no_longer_allowed: 'Пригласивший больше не может приглашать в этот чат',
 };
 
 /** Тот же словарь кодов, которым пользуется {@link toProblem} — для ошибок не из HTTP (например, STOMP). */

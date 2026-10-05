@@ -13,11 +13,23 @@
 } @else if (conversation(); as chat) {
   <header class="dialog-head">
     <a class="back" routerLink="/chats">Все чаты</a>
-    <app-avatar [name]="chat.otherDisplayName" [size]="40" />
-    <div class="who">
-      <a class="name" [routerLink]="['/users', chat.otherUsername]">{{ chat.otherDisplayName }}</a>
-      <span class="username">&#64;{{ chat.otherUsername }}</span>
-    </div>
+    @if (chat.type === 'GROUP') {
+      @if (chat.avatarMediaId) {
+        <app-media-view [mediaId]="chat.avatarMediaId" variant="320" shape="circle" [fallbackToOriginal]="true" [label]="'Аватар: ' + chat.title" />
+      } @else {
+        <app-avatar [name]="chat.title ?? 'Чат'" [size]="40" />
+      }
+      <div class="who">
+        <span class="name">{{ chat.title }}</span>
+      </div>
+      <a class="settings-link" [routerLink]="['/chats', chat.id, 'settings']" appButton variant="ghost">Настройки</a>
+    } @else {
+      <app-avatar [name]="chat.otherDisplayName ?? ''" [size]="40" />
+      <div class="who">
+        <a class="name" [routerLink]="['/users', chat.otherUsername]">{{ chat.otherDisplayName }}</a>
+        <span class="username">&#64;{{ chat.otherUsername }}</span>
+      </div>
+    }
   </header>
 
   @if (chat.blocked) {
@@ -44,6 +56,9 @@
             @if (message.deleted) {
               <p class="muted">Сообщение удалено</p>
             } @else {
+              @if (senderName(message); as name) {
+                <p class="sender">{{ name }}</p>
+              }
               @if (message.body) {
                 <p class="text">{{ message.body }}</p>
               }
