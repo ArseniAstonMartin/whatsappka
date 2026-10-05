@@ -48,6 +48,8 @@ export interface PostSummaryPublic {
   hashtags: string[];
   publishedAt: string;
   updatedAt: string;
+  reactionCounts: Partial<Record<ReactionType, number>>;
+  viewerReaction: ReactionType | null;
 }
 
 export interface PostRef {

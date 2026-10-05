@@ -2,6 +2,7 @@ package by.whatsappka.content;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -11,6 +12,7 @@ import java.util.UUID;
  */
 public record PostSummaryPublic(
         UUID id, String body, UUID authorId, String authorUsername, String authorDisplayName, UUID authorAvatarMediaId,
-        UUID groupId, List<UUID> mediaIds, List<String> hashtags, Instant publishedAt, Instant updatedAt
+        UUID groupId, List<UUID> mediaIds, List<String> hashtags, Instant publishedAt, Instant updatedAt,
+        Map<String, Long> reactionCounts, String viewerReaction
 ) {
 }

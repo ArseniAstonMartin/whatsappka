@@ -46,6 +46,12 @@
   }
 
   <div class="actions">
+    <app-reaction-bar
+      target="post"
+      [targetId]="post().id"
+      [counts]="post().reactionCounts"
+      [viewerReaction]="post().viewerReaction"
+    />
     <a [routerLink]="['/posts', post().id]" appButton variant="ghost">Комментарии</a>
     @if (isOwn()) {
       <a [routerLink]="['/posts', post().id, 'edit']" appButton variant="secondary">Редактировать</a>

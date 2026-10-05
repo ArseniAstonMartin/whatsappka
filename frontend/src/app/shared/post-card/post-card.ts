@@ -10,14 +10,15 @@ import { AppButton } from '../ui/button/app-button';
 import { Avatar } from '../ui/avatar/avatar';
 import { Card } from '../ui/card/card';
 import { MediaView } from '../media/media-view/media-view';
+import { ReactionBar } from '../reaction-bar/reaction-bar';
 
 /**
- * Одна карточка опубликованного поста: автор, текст, изображения, хештеги, отметка правки.
- * Действия (редактировать/удалить) видны только автору — то же решает и сервер (TASK-047).
+ * Одна карточка опубликованного поста: автор, текст, изображения, хештеги, отметка правки, реакции
+ * (TASK-051). Действия (редактировать/удалить) видны только автору — то же решает и сервер (TASK-047).
  */
 @Component({
   selector: 'app-post-card',
-  imports: [DatePipe, RouterLink, AppButton, Avatar, Card, MediaView],
+  imports: [DatePipe, RouterLink, AppButton, Avatar, Card, MediaView, ReactionBar],
   templateUrl: './post-card.html',
   styleUrl: './post-card.scss',
 })

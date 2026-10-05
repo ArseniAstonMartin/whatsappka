@@ -32,8 +32,8 @@ public class HashtagService {
                 + "WHERE ph.post_id = p.id AND h.normalized_name = ?)";
         String sql = PostListingSupport.selectSql(hasTag + " AND " + PostVisibilitySql.GROUP_VISIBLE_TO_VIEWER, key != null);
         List<PostSummaryPublic> rows = key == null
-                ? jdbc.query(sql, PostListingSupport.ROW_MAPPER, tag, viewerId, viewerId, size + 1)
-                : jdbc.query(sql, PostListingSupport.ROW_MAPPER, tag, viewerId, viewerId, Timestamp.from(key.at()), key.id(), size + 1);
+                ? jdbc.query(sql, PostListingSupport.ROW_MAPPER, viewerId, tag, viewerId, viewerId, size + 1)
+                : jdbc.query(sql, PostListingSupport.ROW_MAPPER, viewerId, tag, viewerId, viewerId, Timestamp.from(key.at()), key.id(), size + 1);
         boolean more = rows.size() > size;
         List<PostSummaryPublic> items = more ? rows.subList(0, size) : rows;
         String next = more ? PostListingSupport.encode(items.get(items.size() - 1).publishedAt(), items.get(items.size() - 1).id()) : null;

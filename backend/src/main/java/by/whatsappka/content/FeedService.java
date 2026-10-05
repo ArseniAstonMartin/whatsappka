@@ -77,6 +77,7 @@ public class FeedService {
         List<Object> params = new ArrayList<>();
         params.add(viewerId);
         params.add(viewerId);
+        params.add(viewerId);
         params.addAll(sourceParams);
         if (key != null) {
             params.add(Timestamp.from(key.at()));

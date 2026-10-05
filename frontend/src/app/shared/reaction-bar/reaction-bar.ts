@@ -1,4 +1,6 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { CdkMenu, CdkMenuItem, CdkMenuTrigger } from '@angular/cdk/menu';
+import { AppButton } from '../ui/button/app-button';
 import { ReactionService, ReactionType } from '../../core/reaction.service';
 import { toProblem } from '../../core/api-error';
 import { ToastService } from '../ui/toast/toast.service';
@@ -31,12 +33,15 @@ function applyChange(state: ReactionState, next: ReactionType | null): ReactionS
 }
 
 /**
- * Панель из шести реакций (TASK-050, FR-05). Повтор выбранной реакции снимает её, другой тип
- * заменяет предыдущую. Отображение обновляется оптимистично и откатывается при ошибке запроса —
- * сервер остаётся источником истины при следующей загрузке данных родителем.
+ * Панель из шести реакций (TASK-050/051, FR-05): лайк — один из типов, а не отдельный счётчик.
+ * Повтор выбранной реакции снимает её, другой тип заменяет предыдущую. Клавиатурную навигацию по
+ * меню (стрелки, Esc, клик вне) даёт CdkMenu — тот же примитив, что и у {@link MenuButton}.
+ * Отображение обновляется оптимистично и откатывается при ошибке запроса; сервер остаётся
+ * источником истины при следующей загрузке данных родителем.
  */
 @Component({
   selector: 'app-reaction-bar',
+  imports: [AppButton, CdkMenu, CdkMenuItem, CdkMenuTrigger],
   templateUrl: './reaction-bar.html',
   styleUrl: './reaction-bar.scss',
 })
@@ -50,7 +55,6 @@ export class ReactionBar {
   readonly viewerReaction = input.required<ReactionType | null>();
 
   protected readonly options = OPTIONS;
-  protected readonly pickerOpen = signal(false);
   protected readonly busy = signal(false);
   private readonly override = signal<ReactionState | null>(null);
 
@@ -74,16 +78,7 @@ export class ReactionBar {
     return this.state().counts[type] ?? 0;
   }
 
-  protected togglePicker(): void {
-    this.pickerOpen.update((v) => !v);
-  }
-
-  protected closePicker(): void {
-    this.pickerOpen.set(false);
-  }
-
   protected async pick(type: ReactionType): Promise<void> {
-    this.pickerOpen.set(false);
     if (this.busy()) {
       return;
     }
