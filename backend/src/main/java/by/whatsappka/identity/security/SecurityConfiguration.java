@@ -1,6 +1,7 @@
 package by.whatsappka.identity.security;
 
 import by.whatsappka.platform.web.ApiResponses;
+import by.whatsappka.platform.web.SecurityHeaders;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,7 +14,9 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -33,6 +36,15 @@ public class SecurityConfiguration {
             throws Exception {
         return http
                 // Bearer-токены браузер не прикладывает сам. Cookie-операции защищены SameSite=Lax и проверкой Origin.
+                .headers(headers -> {
+                    headers.contentSecurityPolicy(csp -> csp.policyDirectives(SecurityHeaders.CONTENT_SECURITY_POLICY));
+                    headers.referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN));
+                    headers.permissionsPolicy(permissions -> permissions.policy(SecurityHeaders.PERMISSIONS_POLICY));
+                    headers.httpStrictTransportSecurity(hsts -> hsts.includeSubDomains(true)
+                            .maxAgeInSeconds(SecurityHeaders.HSTS_MAX_AGE_SECONDS));
+                    headers.contentTypeOptions(Customizer.withDefaults());
+                    headers.frameOptions(frame -> frame.deny());
+                })
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)

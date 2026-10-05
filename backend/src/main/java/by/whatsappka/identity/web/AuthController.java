@@ -5,6 +5,9 @@ import by.whatsappka.identity.RegistrationService;
 import by.whatsappka.identity.SessionService;
 import by.whatsappka.identity.account.UserAccount;
 import by.whatsappka.identity.token.AccessTokenIssuer;
+import by.whatsappka.platform.ratelimit.RateLimiter;
+import by.whatsappka.platform.ratelimit.RateLimitPolicy;
+import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.ApiV1Controller;
 import by.whatsappka.platform.web.PublicApi;
 import jakarta.servlet.http.HttpServletRequest;
@@ -31,13 +34,17 @@ public class AuthController {
     private final RefreshCookies refreshCookies;
     private final OriginGuard originGuard;
 
+    private final RateLimiter limits;
+
     public AuthController(
             RegistrationService registration,
             AuthenticationService authentication,
             SessionService sessions,
             RefreshCookies refreshCookies,
-            OriginGuard originGuard
+            OriginGuard originGuard,
+            RateLimiter limits
     ) {
+        this.limits = limits;
         this.registration = registration;
         this.authentication = authentication;
         this.sessions = sessions;
@@ -48,7 +55,9 @@ public class AuthController {
     @PublicApi
     @PostMapping("/auth/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public UserSummary register(@Valid @RequestBody RegisterRequest request) {
+    public UserSummary register(@Valid @RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
+        // PRD: не более 5 регистраций в час с одного адреса.
+        limits.consume("register", httpRequest.getRemoteAddr(), 5, RateLimitPolicy.HOUR);
         UserAccount account = registration.register(request.email(), request.username(), request.password());
         return new UserSummary(account.id(), account.username());
     }
@@ -59,11 +68,19 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest
     ) {
-        AuthenticationService.LoginResult result = authentication.login(
-                request.email(),
-                request.password(),
-                deviceLabel(httpRequest)
-        );
+        // PRD: 5 неудачных попыток в минуту на сочетание адреса и почты. Засчитываются только неверные пароли;
+        // ответ одинаков, существует аккаунт или нет, и окно скользит сразу, без постоянной блокировки.
+        String loginKey = RateLimitPolicy.loginKey(httpRequest.getRemoteAddr(), request.email());
+        limits.requireAvailable("login", loginKey, 5);
+        AuthenticationService.LoginResult result;
+        try {
+            result = authentication.login(request.email(), request.password(), deviceLabel(httpRequest));
+        } catch (ApiException failure) {
+            if ("invalid_credentials".equals(failure.code())) {
+                limits.recordFailure("login", loginKey, RateLimitPolicy.MINUTE);
+            }
+            throw failure;
+        }
         UserAccount user = result.user();
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshCookies.issue(result.refreshToken(), result.refreshExpiresAt()).toString())

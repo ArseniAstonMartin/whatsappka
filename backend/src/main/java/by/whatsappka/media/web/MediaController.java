@@ -4,6 +4,9 @@ import by.whatsappka.identity.security.AuthenticatedUser;
 import by.whatsappka.media.MediaAsset;
 import by.whatsappka.media.MediaPurpose;
 import by.whatsappka.media.MediaUploadService;
+import by.whatsappka.platform.ratelimit.RateLimiter;
+import by.whatsappka.platform.ratelimit.RateLimitPolicy;
+import by.whatsappka.platform.ratelimit.ConcurrencyLimiter;
 import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.ApiV1Controller;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,7 +32,12 @@ public class MediaController {
 
     private final MediaUploadService uploads;
 
-    public MediaController(MediaUploadService uploads) {
+    private final RateLimiter limits;
+    private final ConcurrencyLimiter concurrency;
+
+    public MediaController(MediaUploadService uploads, RateLimiter limits, ConcurrencyLimiter concurrency) {
+        this.limits = limits;
+        this.concurrency = concurrency;
         this.uploads = uploads;
     }
 
@@ -46,14 +54,19 @@ public class MediaController {
             throw new ApiException(HttpStatus.LENGTH_REQUIRED, "length_required",
                     "Укажите размер файла в Content-Length", List.of(), null);
         }
-        MediaAsset asset = uploads.upload(
-                user.userId(),
-                parsed,
-                decodeFilename(request.getHeader(FILENAME_HEADER)),
-                length,
-                request.getHeader(HttpHeaders.CONTENT_TYPE),
-                request.getInputStream()
-        );
+        // PRD: 10 загрузок в минуту и не более двух одновременных на пользователя.
+        limits.consume("upload", user.userId().toString(), 10, RateLimitPolicy.MINUTE);
+        MediaAsset asset;
+        try (ConcurrencyLimiter.Lease ignored = concurrency.acquire(user.userId().toString(), 2)) {
+            asset = uploads.upload(
+                    user.userId(),
+                    parsed,
+                    decodeFilename(request.getHeader(FILENAME_HEADER)),
+                    length,
+                    request.getHeader(HttpHeaders.CONTENT_TYPE),
+                    request.getInputStream()
+            );
+        }
         return ResponseEntity.status(HttpStatus.CREATED).body(MediaResponse.of(asset));
     }
 

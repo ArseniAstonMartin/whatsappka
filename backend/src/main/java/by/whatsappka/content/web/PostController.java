@@ -8,6 +8,8 @@ import by.whatsappka.identity.security.AuthenticatedUser;
 import by.whatsappka.platform.idempotency.IdempotencyRecords;
 import by.whatsappka.platform.idempotency.IdempotentResponse;
 import by.whatsappka.platform.idempotency.IdempotentResult;
+import by.whatsappka.platform.ratelimit.RateLimiter;
+import by.whatsappka.platform.ratelimit.RateLimitPolicy;
 import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.ApiV1Controller;
 import by.whatsappka.platform.web.CursorPage;
@@ -39,7 +41,10 @@ public class PostController {
     private final PostSchedulingService scheduling;
     private final IdempotencyRecords idempotency;
 
-    public PostController(PostService posts, PostSchedulingService scheduling, IdempotencyRecords idempotency) {
+    private final RateLimiter limits;
+
+    public PostController(PostService posts, PostSchedulingService scheduling, IdempotencyRecords idempotency, RateLimiter limits) {
+        this.limits = limits;
         this.posts = posts;
         this.scheduling = scheduling;
         this.idempotency = idempotency;
@@ -47,6 +52,8 @@ public class PostController {
 
     @PostMapping("/posts")
     public ResponseEntity<PostRef> create(@RequestBody CreateRequest request, @AuthenticationPrincipal AuthenticatedUser viewer) {
+        // PRD: не более 10 публикаций в минуту на пользователя.
+        limits.consume("post", viewer.userId().toString(), 10, RateLimitPolicy.MINUTE);
         UUID id = posts.create(viewer.userId(), request.groupId(), request.body(), request.media(), request.hashtags());
         return ResponseEntity.status(HttpStatus.CREATED).body(new PostRef(id));
     }

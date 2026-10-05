@@ -1,5 +1,7 @@
 package by.whatsappka.messaging.web;
 
+import by.whatsappka.platform.ratelimit.RateLimiter;
+import by.whatsappka.platform.ratelimit.RateLimitPolicy;
 import by.whatsappka.messaging.MessageService;
 import by.whatsappka.platform.realtime.RealtimeEvent;
 import by.whatsappka.platform.realtime.RealtimePublisher;
@@ -26,7 +28,10 @@ public class MessageStompController {
     private final MessageService messages;
     private final RealtimePublisher realtime;
 
-    public MessageStompController(MessageService messages, RealtimePublisher realtime) {
+    private final RateLimiter limits;
+
+    public MessageStompController(MessageService messages, RealtimePublisher realtime, RateLimiter limits) {
+        this.limits = limits;
         this.messages = messages;
         this.realtime = realtime;
     }
@@ -36,6 +41,8 @@ public class MessageStompController {
         UUID sender = UUID.fromString(principal.getName());
         UUID clientMessageId = payload.clientMessageId();
         try {
+            // PRD: не более 30 сообщений в минуту на пользователя.
+            limits.consume("message", sender.toString(), 30, RateLimitPolicy.MINUTE);
             MessageService.Sent sent = messages.send(sender, conversationId, clientMessageId, payload.body(),
                     payload.attachments() == null ? List.of() : payload.attachments());
             Map<String, Object> body = Map.of(
@@ -50,10 +57,14 @@ public class MessageStompController {
                 }
             }
         } catch (ApiException failure) {
-            realtime.deliver(sender, event("message.failed", conversationId, null, null, Map.of(
-                    "clientMessageId", String.valueOf(clientMessageId),
-                    "code", failure.code(),
-                    "detail", failure.detail())));
+            Map<String, Object> details = new java.util.HashMap<>();
+            details.put("clientMessageId", String.valueOf(clientMessageId));
+            details.put("code", failure.code());
+            details.put("detail", failure.detail());
+            if (failure.retryAfter() != null) {
+                details.put("retryAfterSeconds", failure.retryAfter().toSeconds());
+            }
+            realtime.deliver(sender, event("message.failed", conversationId, null, null, details));
         }
     }
 
