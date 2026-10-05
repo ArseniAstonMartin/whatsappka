@@ -1,0 +1,78 @@
+/*
+ * Токены дизайн-системы (PRD §8.2). Тёмная тема в первой версии не предусмотрена.
+ * Контраст измерен на сочетаниях, которые используются в интерфейсе:
+ * текст на canvas/surface/surface-muted ≥ 4.9:1, текст-приглушённый ≥ 4.9:1,
+ * управляющие границы ≥ 3:1 к canvas и surface, основной текст на primary ≥ 5.4:1.
+ */
+:root {
+  color-scheme: light;
+
+  /* Поверхности: серо-голубой фон без чисто белого. */
+  --color-canvas: #EAF0F5;
+  --color-surface: #F4F7FA;
+  --color-surface-muted: #E1EAF1;
+
+  /* Василёк: основное действие, активный пункт, ссылка и фокус. */
+  --color-primary: #3155E7;
+  --color-primary-hover: #2342C5;
+  --color-primary-soft: #E0E7FD;
+  --color-primary-deep: #1E3A9E;
+
+  /* Хвойный акцент и мята: успешные состояния и декоративные подложки. */
+  --color-accent: #176B57;
+  --color-accent-soft: #D9EEE5;
+  --color-accent-mint: #7CCFB0;
+
+  --color-text: #18283B;
+  --color-text-muted: #536579;
+  /* Разделители. Не используются как единственный индикатор состояния. */
+  --color-border: #CAD6E1;
+  /* Границы полей, кнопок и других управляющих элементов (≥ 3:1). */
+  --color-control-border: #6F839B;
+  /* Ошибка и удаление. Не используется как декоративный цвет. */
+  --color-danger: #B33D50;
+  --color-on-primary: var(--color-surface);
+
+  /* Градиенты только в ограниченных декоративных областях. */
+  --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-primary-deep));
+  --gradient-accent: linear-gradient(135deg, var(--color-accent), var(--color-accent-mint));
+
+  /* Сетка отступов: 4/8/12/16/24/32/48 px. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  /* Радиусы: поля и кнопки 14–16, карточки 20–24, крупные панели 28, аватары круглые. */
+  --radius-control: 14px;
+  --radius-card: 20px;
+  --radius-panel: 28px;
+  --radius-avatar: 50%;
+
+  --shadow-soft: 0 1px 2px rgb(24 40 59 / 0.04), 0 4px 12px rgb(24 40 59 / 0.06);
+
+  --font-family-base: 'Manrope Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-size-body: 16px;
+  --font-size-small: 14px;
+  --font-size-h2: 24px;
+  --font-size-h1: 32px;
+  --line-height-body: 1.5;
+
+  /* Анимации 120–220 мс. */
+  --motion-fast: 120ms;
+  --motion-base: 220ms;
+
+  --touch-target: 44px;
+  --focus-outline: 2px solid var(--color-primary);
+  --focus-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+  }
+}
