@@ -29,8 +29,12 @@ export const routes: Routes = [
       {
         path: 'search',
         title: 'Поиск',
-        loadComponent: section,
-        data: { heading: 'Поиск', kind: 'empty', title: 'Поиск пока недоступен', message: 'Введите запрос, чтобы найти людей, записи, группы и хештеги.' },
+        loadComponent: () => import('./features/search/search-page/search-page').then((m) => m.SearchPage),
+      },
+      {
+        path: 'hashtags/:tag',
+        title: 'Хештег',
+        loadComponent: () => import('./features/search/hashtag-page/hashtag-page').then((m) => m.HashtagPage),
       },
       {
         path: 'posts/drafts',

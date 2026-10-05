@@ -1,0 +1,113 @@
+<h1 class="heading">Поиск</h1>
+
+<form class="search" role="search" (submit)="$event.preventDefault()">
+  <label class="label" for="search-input">Что найти</label>
+  <input
+    id="search-input"
+    class="field"
+    type="search"
+    autocomplete="off"
+    placeholder="Имя, текст, группа или #тег"
+    [value]="input()"
+    (input)="onInput($any($event.target).value)"
+  />
+</form>
+
+<div class="tabs" role="tablist" aria-label="Разделы поиска">
+  @for (t of tabs; track t.id) {
+    <button
+      type="button"
+      role="tab"
+      class="tab"
+      [class.active]="tab() === t.id"
+      [id]="tabId(t.id)"
+      [attr.aria-selected]="tab() === t.id"
+      [attr.tabindex]="tab() === t.id ? 0 : -1"
+      (click)="selectTab(t.id)"
+    >
+      {{ t.label }}
+    </button>
+  }
+</div>
+
+<section class="panel" role="tabpanel" [attr.aria-labelledby]="tabId(tab())">
+  @if (tooShort()) {
+    <p class="hint">Введите минимум два символа. Пустой запрос ничего не ищет.</p>
+  } @else if (loading()) {
+    <div class="stack" aria-busy="true">
+      <app-skeleton width="100%" height="56px" />
+      <app-skeleton width="100%" height="56px" />
+    </div>
+  } @else if (error()) {
+    <app-state-panel kind="error" title="Поиск не выполнен" [message]="error()!">
+      <button type="button" appButton variant="secondary" (click)="retry()">Повторить</button>
+    </app-state-panel>
+  } @else if (count() === 0) {
+    <app-state-panel kind="empty" title="Ничего не найдено" message="Попробуйте другой запрос или другой раздел." />
+  } @else {
+    @switch (tab()) {
+      @case ('people') {
+        <ul class="list">
+          @for (u of people(); track u.id) {
+            <li>
+              <a class="row" [routerLink]="['/users', u.username]">
+                <span class="name">{{ u.displayName }}</span>
+                <span class="meta">&#64;{{ u.username }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+      @case ('posts') {
+        <ul class="list">
+          @for (p of posts(); track p.id) {
+            <li>
+              <a class="row" [routerLink]="['/posts', p.id]">
+                <span class="meta">{{ p.authorDisplayName }} · {{ time(p.publishedAt) }}</span>
+                <span class="snippet">{{ p.snippet ?? 'Публикация без текста' }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+      @case ('groups') {
+        <ul class="list">
+          @for (g of groups(); track g.id) {
+            <li>
+              <a class="row" [routerLink]="['/groups', g.slug]">
+                <span class="name">{{ g.name }}</span>
+                <span class="meta">
+                  @if (g.restricted) {
+                    Закрытое сообщество: видно только название
+                  } @else {
+                    Открытое сообщество
+                  }
+                </span>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+      @case ('tags') {
+        <ul class="list">
+          @for (t of tags(); track t.name) {
+            <li>
+              <a class="row" [routerLink]="tagLink(t.name)">
+                <span class="name">#{{ t.displayName }}</span>
+                <span class="meta">публикаций: {{ t.popularity }}</span>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    }
+
+    @if (tab() !== 'tags' && hasMore()) {
+      <div class="more">
+        <button type="button" appButton variant="secondary" [busy]="loadingMore()" (click)="loadMore()">
+          {{ loadingMore() ? 'Загружаем…' : 'Загрузить ещё' }}
+        </button>
+      </div>
+    }
+  }
+</section>
