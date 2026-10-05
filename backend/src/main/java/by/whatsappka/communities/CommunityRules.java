@@ -78,6 +78,11 @@ final class CommunityRules {
         return actor != Role.OWNER;
     }
 
+    /** Приглашать в сообщество могут владелец и администраторы. */
+    static boolean canInvite(Role actor) {
+        return actor == Role.OWNER || actor == Role.ADMIN;
+    }
+
     static Role parseAssignableRole(String raw) {
         if ("ADMIN".equals(raw)) {
             return Role.ADMIN;
