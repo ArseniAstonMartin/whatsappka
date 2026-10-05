@@ -152,7 +152,7 @@ public class GroupService {
         event(conversationId, EVENT_AVATAR_CHANGED, actorId, null);
     }
 
-    private void lock(UUID conversationId) {
+    void lock(UUID conversationId) {
         jdbc.query(GroupSql.LOCK_CONVERSATION, rs -> { }, conversationId);
         Object owner = jdbc.query(GroupSql.OWNER_OF, rs -> rs.next() ? rs.getObject(1) : null, conversationId);
         if (owner == null) {
