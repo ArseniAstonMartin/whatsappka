@@ -12,6 +12,9 @@ import java.util.UUID;
 public class MediaAsset {
 
     public static final String STATUS_UPLOADED = "UPLOADED";
+    public static final String STATUS_PROCESSING = "PROCESSING";
+    public static final String STATUS_READY = "READY";
+    public static final String STATUS_FAILED = "FAILED";
 
     @Id
     private UUID id;
@@ -109,6 +112,41 @@ public class MediaAsset {
 
     public long sizeBytes() {
         return sizeBytes;
+    }
+
+    public Integer width() {
+        return width;
+    }
+
+    public Integer height() {
+        return height;
+    }
+
+    public String failureCode() {
+        return failureCode;
+    }
+
+    /** UPLOADED или повтор из PROCESSING. Готовое и неудачное медиа не обрабатывается снова. */
+    public void startProcessing(Instant now) {
+        if (!STATUS_UPLOADED.equals(status) && !STATUS_PROCESSING.equals(status)) {
+            throw new IllegalStateException("Обработка возможна только для UPLOADED или PROCESSING");
+        }
+        this.status = STATUS_PROCESSING;
+        this.updatedAt = now;
+    }
+
+    public void markReady(Integer width, Integer height, Instant now) {
+        this.status = STATUS_READY;
+        this.width = width;
+        this.height = height;
+        this.failureCode = null;
+        this.updatedAt = now;
+    }
+
+    public void markFailed(String code, Instant now) {
+        this.status = STATUS_FAILED;
+        this.failureCode = code;
+        this.updatedAt = now;
     }
 
     public boolean isDeleted() {

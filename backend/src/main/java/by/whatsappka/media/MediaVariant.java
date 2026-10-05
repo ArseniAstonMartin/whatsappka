@@ -38,13 +38,28 @@ public class MediaVariant {
     protected MediaVariant() {
     }
 
-    public MediaVariant(UUID id, UUID ownerId, UUID mediaId, VariantKind kind, long sizeBytes, Instant now) {
+    public MediaVariant(
+            UUID id,
+            UUID ownerId,
+            UUID mediaId,
+            VariantKind kind,
+            long sizeBytes,
+            int width,
+            int height,
+            Instant now
+    ) {
         this.id = id;
         this.mediaId = mediaId;
         this.kind = kind.name();
         this.objectKey = MediaKeys.variant(ownerId, mediaId, kind);
         this.sizeBytes = sizeBytes;
+        this.width = width;
+        this.height = height;
         this.createdAt = now;
+    }
+
+    public String kind() {
+        return kind;
     }
 
     public UUID mediaId() {
