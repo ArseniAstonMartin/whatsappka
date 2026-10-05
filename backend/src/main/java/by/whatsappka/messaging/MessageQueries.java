@@ -37,7 +37,8 @@ public class MessageQueries {
             Instant updatedAt,
             long version,
             boolean deleted,
-            List<Attachment> attachments
+            List<Attachment> attachments,
+            UUID clientMessageId
     ) {
     }
 
@@ -61,6 +62,24 @@ public class MessageQueries {
                 : jdbc.query(MessageSql.HISTORY_BEFORE, ROW, conversationId, joined.get(0), before, size + 1);
         boolean more = rows.size() > size;
         List<Row> shown = more ? rows.subList(0, size) : rows;
+        String next = more ? String.valueOf(shown.get(shown.size() - 1).seq()) : null;
+        return new CursorPage<>(views(viewerId, shown), next, more);
+    }
+
+    /** Снимки конкретных сообщений журнала, включая старые правки и заглушки удаления. */
+    List<MessageView> snapshots(UUID viewerId, UUID conversationId, long joinedSeq, List<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        String placeholders = String.join(", ", Collections.nCopies(ids.size(), "?"));
+        List<Object> args = new ArrayList<>();
+        args.add(conversationId);
+        args.add(joinedSeq);
+        args.addAll(ids);
+        return views(viewerId, jdbc.query(MessageSql.SNAPSHOTS_BY_ID.formatted(placeholders), ROW, args.toArray()));
+    }
+
+    private List<MessageView> views(UUID viewerId, List<Row> shown) {
         Map<UUID, List<Attachment>> attachments = attachmentsFor(shown);
         List<MessageView> items = new ArrayList<>(shown.size());
         for (Row row : shown) {
@@ -74,10 +93,10 @@ public class MessageQueries {
                     row.updatedAt(),
                     row.version(),
                     deleted,
-                    deleted ? List.of() : attachments.getOrDefault(row.id(), List.of())));
+                    deleted ? List.of() : attachments.getOrDefault(row.id(), List.of()),
+                    row.senderId().equals(viewerId) ? row.clientMessageId() : null));
         }
-        String next = more ? String.valueOf(shown.get(shown.size() - 1).seq()) : null;
-        return new CursorPage<>(items, next, more);
+        return items;
     }
 
     private Map<UUID, List<Attachment>> attachmentsFor(List<Row> rows) {
@@ -114,7 +133,7 @@ public class MessageQueries {
     }
 
     private record Row(UUID id, long seq, UUID senderId, String body, Instant createdAt,
-                       Instant updatedAt, long version, Instant deletedAt) {
+                       Instant updatedAt, long version, Instant deletedAt, UUID clientMessageId) {
     }
 
     private static final RowMapper<Row> ROW = (rs, n) -> new Row(
@@ -125,5 +144,6 @@ public class MessageQueries {
             rs.getTimestamp("created_at").toInstant(),
             rs.getTimestamp("updated_at").toInstant(),
             rs.getLong("version"),
-            rs.getTimestamp("deleted_at") == null ? null : rs.getTimestamp("deleted_at").toInstant());
+            rs.getTimestamp("deleted_at") == null ? null : rs.getTimestamp("deleted_at").toInstant(),
+            rs.getObject("client_message_id", UUID.class));
 }

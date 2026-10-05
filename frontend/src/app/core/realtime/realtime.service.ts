@@ -42,7 +42,6 @@ export class RealtimeService {
   private subscriptions: StompSubscription[] = [];
   private attempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private hasConnectedBefore = false;
   private stopped = true;
 
   constructor() {
@@ -61,11 +60,15 @@ export class RealtimeService {
     if (!this.client?.connected) {
       return false;
     }
-    this.client.publish({
-      destination: `/app/conversations/${conversationId}/${command}`,
-      body: JSON.stringify(body),
-    });
-    return true;
+    try {
+      this.client.publish({
+        destination: `/app/conversations/${conversationId}/${command}`,
+        body: JSON.stringify(body),
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private start(): void {
@@ -105,8 +108,8 @@ export class RealtimeService {
       // Переподключение ведём сами: нужен джиттер и обновление токена перед попыткой.
       reconnectDelay: 0,
       onConnect: () => this.onConnected(client),
-      onStompError: () => this.onDropped(),
-      onWebSocketClose: () => this.onDropped(),
+      onStompError: () => this.onDropped(client),
+      onWebSocketClose: () => this.onDropped(client),
     });
     this.client = client;
     client.activate();
@@ -123,18 +126,16 @@ export class RealtimeService {
     ];
     this.connected.set(true);
     this.connection.setStatus('online');
-    if (this.hasConnectedBefore) {
-      this.resyncSubject.next();
-    }
-    this.hasConnectedBefore = true;
+    this.resyncSubject.next();
   }
 
-  private onDropped(): void {
-    if (this.stopped) {
+  private onDropped(client: Client): void {
+    if (this.stopped || client !== this.client) {
       return;
     }
-    this.subscriptions.forEach((s) => s.unsubscribe());
     this.subscriptions = [];
+    this.client = null;
+    void client.deactivate();
     this.connected.set(false);
     this.connection.setStatus('reconnecting');
     this.scheduleReconnect();

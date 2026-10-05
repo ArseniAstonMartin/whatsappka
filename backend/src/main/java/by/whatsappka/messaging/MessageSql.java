@@ -54,7 +54,7 @@ final class MessageSql {
             """;
 
     static final String ACTIVE_JOINED_SEQ = """
-            SELECT joined_seq FROM conversation_memberships
+            SELECT joined_seq, id FROM conversation_memberships
             WHERE conversation_id = ? AND user_id = ? AND left_at IS NULL
             """;
 
@@ -63,7 +63,7 @@ final class MessageSql {
      * Блокировку здесь не проверяем: история личного диалога сохраняется.
      */
     static final String HISTORY_FIRST = """
-            SELECT msg.id, msg.seq, msg.sender_id, msg.body, msg.created_at, msg.updated_at, msg.version, msg.deleted_at
+            SELECT msg.id, msg.seq, msg.sender_id, msg.client_message_id, msg.body, msg.created_at, msg.updated_at, msg.version, msg.deleted_at
             FROM messages msg
             WHERE msg.conversation_id = ? AND msg.seq > ?
             ORDER BY msg.seq DESC
@@ -71,7 +71,7 @@ final class MessageSql {
             """;
 
     static final String HISTORY_BEFORE = """
-            SELECT msg.id, msg.seq, msg.sender_id, msg.body, msg.created_at, msg.updated_at, msg.version, msg.deleted_at
+            SELECT msg.id, msg.seq, msg.sender_id, msg.client_message_id, msg.body, msg.created_at, msg.updated_at, msg.version, msg.deleted_at
             FROM messages msg
             WHERE msg.conversation_id = ? AND msg.seq > ? AND msg.seq < ?
             ORDER BY msg.seq DESC
@@ -89,6 +89,13 @@ final class MessageSql {
 
     static final String ATTACHMENTS_SUFFIX = """
             ) ORDER BY mm.message_id, mm.position
+            """;
+
+    static final String SNAPSHOTS_BY_ID = """
+            SELECT msg.id, msg.seq, msg.sender_id, msg.client_message_id, msg.body, msg.created_at, msg.updated_at, msg.version, msg.deleted_at
+            FROM messages msg
+            WHERE msg.conversation_id = ? AND msg.seq > ? AND msg.id IN (%s)
+            ORDER BY msg.seq
             """;
 
     static final String NEXT_EVENT_SEQ = """

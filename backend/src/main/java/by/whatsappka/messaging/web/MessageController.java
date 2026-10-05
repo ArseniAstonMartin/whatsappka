@@ -84,6 +84,12 @@ public class MessageController {
         return events.events(viewer.userId(), conversationId, cursor, limit);
     }
 
+    /** Текущая граница журнала событий: с неё клиент начинает синхронизацию. */
+    @GetMapping("/conversations/{id}/events/head")
+    public MessageEventQueries.Head eventsHead(@PathVariable("id") UUID conversationId, @AuthenticationPrincipal AuthenticatedUser viewer) {
+        return events.head(viewer.userId(), conversationId);
+    }
+
     public record EditRequest(String body) {
     }
 

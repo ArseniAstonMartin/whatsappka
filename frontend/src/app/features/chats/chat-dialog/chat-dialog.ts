@@ -14,8 +14,9 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ChatMessage, ChatService, Conversation, ReadStatus } from '../../../core/chat.service';
+import { mergeMessages } from '../../../core/message-sync';
 import { GroupChatMember, GroupChatRole, GroupChatService } from '../../../core/group-chat.service';
 import { ProfileService } from '../../../core/profile.service';
 import { RealtimeEvent, RealtimeService } from '../../../core/realtime/realtime.service';
@@ -63,6 +64,9 @@ interface PendingMessage {
   status: SendStatus;
   errorText: string | null;
   createdAt: string;
+  /** Не ушло из-за разрыва связи: после восстановления отправляется повторно с тем же ID. */
+  offline: boolean;
+  lastAttemptAt: number | null;
 }
 
 interface AckPayload {
@@ -90,8 +94,8 @@ interface DeletedPayload {
 }
 
 /**
- * История диалога — личного или группового (TASK-061, TASK-062) — отправка, правка и удаление
- * сообщений (TASK-063). Сервер отдаёт страницы от новых к старым; здесь они выводятся снизу вверх.
+ * История диалога — отправка, правка и удаление сообщений.
+ * Сервер отдаёт страницы от новых к старым; здесь они выводятся снизу вверх.
  * Подгрузка более старых страниц сохраняет место просмотра: высота, добавленная сверху, компенсируется
  * прокруткой.
  *
@@ -110,10 +114,16 @@ interface TypingPayload {
 const TYPING_INTERVAL_MS = 2000;
 /** Статус прочтения обновляется, пока вкладка видима: сервер не присылает чужое прочтение отдельным событием. */
 const READ_STATUS_INTERVAL_MS = 15000;
+/** REST также страхует потерю Redis-сигналов при живом WebSocket. */
+const SYNC_POLL_INTERVAL_MS = 5000;
+/** Не больше стольких страниц журнала за один проход: остальное догонит следующий проход. */
+const EVENT_PAGES_MAX = 5;
 
 @Component({
   selector: 'app-chat-dialog',
   imports: [
+    // FormsModule нужен, чтобы (ngSubmit) перехватывал отправку формы; иначе браузер перезагружает страницу.
+    FormsModule,
     ReactiveFormsModule,
     AppButton,
     Avatar,
@@ -153,6 +163,7 @@ export class ChatDialog {
   protected readonly loadingOlder = signal(false);
   protected readonly notFound = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly syncWarning = signal<string | null>(null);
 
   protected readonly memberNames = computed<Record<string, string>>(() => {
     const names: Record<string, string> = {};
@@ -182,6 +193,9 @@ export class ChatDialog {
   protected readonly reasonError = signal<string | null>(null);
 
   private loadToken = 0;
+  private historyRevision = 0;
+  private openedId: string | null = null;
+  private destroyed = false;
 
   /** Кто сейчас печатает: id → таймер, который снимает индикатор по сроку из сигнала (сигнал об окончании не нужен). */
   private readonly typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -201,6 +215,12 @@ export class ChatDialog {
 
   /** Последнее прочтение, отправленное серверу в этом диалоге. Повторно меньший или равный seq не шлём. */
   private lastReadSent = 0;
+  /** Граница журнала, до которой клиент уже применил события. Null — синхронизация ещё не начиналась. */
+  private eventCursor: number | null = null;
+  private membershipId: string | null = null;
+  private syncRun: object | null = null;
+  private syncRequested = false;
+  private syncTimer: ReturnType<typeof setTimeout> | null = null;
   /** Последнее своё неудалённое сообщение: под ним показывается подтверждённое прочтение. */
   protected readonly lastOwnId = computed<string | null>(() => {
     const own = this.messages().filter((m) => this.isOwn(m) && !m.deleted);
@@ -227,12 +247,25 @@ export class ChatDialog {
     // Вернулась видимость вкладки: отмечаем прочитанным то, что пришло, пока её не было видно.
     fromEvent(document, 'visibilitychange').pipe(takeUntilDestroyed()).subscribe(() => {
       if (document.visibilityState === 'visible') {
+        void this.syncEvents();
         this.markRead();
         void this.refreshReadStatus();
       }
     });
-    // После переподключения сервер не знает о прочтении, отправленном без связи.
-    this.realtime.resync$.pipe(takeUntilDestroyed()).subscribe(() => this.markRead());
+    effect(() => {
+      if (!this.realtime.connected()) {
+        untracked(() => this.connectionLost());
+      }
+    });
+    this.realtime.resync$.pipe(takeUntilDestroyed()).subscribe(() => {
+      this.lastReadSent = 0;
+      void this.syncEvents();
+    });
+    interval(SYNC_POLL_INTERVAL_MS)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        void this.syncEvents();
+      });
     interval(READ_STATUS_INTERVAL_MS)
       .pipe(takeUntilDestroyed())
       .subscribe(() => {
@@ -240,26 +273,55 @@ export class ChatDialog {
           void this.refreshReadStatus();
         }
       });
-    inject(DestroyRef).onDestroy(() => this.clearTyping());
+    inject(DestroyRef).onDestroy(() => {
+      this.destroyed = true;
+      ++this.loadToken;
+      this.clearTyping();
+      if (this.syncTimer !== null) clearTimeout(this.syncTimer);
+    });
   }
 
   protected async start(conversationId: string): Promise<void> {
     const token = ++this.loadToken;
+    ++this.historyRevision;
+    this.syncRun = null;
+    this.syncRequested = false;
+    if (this.syncTimer !== null) clearTimeout(this.syncTimer);
+    this.syncTimer = null;
     this.loading.set(true);
     this.notFound.set(false);
     this.error.set(null);
+    this.syncWarning.set(null);
     this.messages.set([]);
-    this.pending.set([]);
+    if (this.openedId !== conversationId) {
+      this.pending.set([]);
+      this.textControl.setValue('');
+      this.attachSlots.set([]);
+      this.attachReady.set({});
+    }
+    this.openedId = conversationId;
+    this.conversation.set(null);
+    this.members.set([]);
+    this.loadingOlder.set(false);
+    this.editingId.set(null);
+    this.reasonPromptId.set(null);
     this.clearTyping();
     this.lastReadSent = 0;
     this.readStatus.set(null);
+    this.eventCursor = null;
+    this.membershipId = null;
     try {
+      // Граница журнала — до истории: событие между ними попадёт в синхронизацию и применится дважды безопасно.
+      const head = await this.chats.eventsHead(conversationId);
+      if (!this.isCurrent(conversationId, token)) {
+        return;
+      }
       const [conversation, own, page] = await Promise.all([
         this.chats.get(conversationId),
         this.selfId() ? Promise.resolve(null) : this.profiles.own(),
         this.chats.history(conversationId, null),
       ]);
-      if (token !== this.loadToken) {
+      if (!this.isCurrent(conversationId, token)) {
         return;
       }
       if (own) {
@@ -269,6 +331,9 @@ export class ChatDialog {
       this.messages.set(oldestFirst(page.items));
       this.nextCursor.set(page.nextCursor);
       this.hasMore.set(page.hasMore);
+      this.eventCursor = head.cursor;
+      this.membershipId = head.membershipId;
+      this.reconcilePending(page.items);
       this.markRead();
       void this.refreshReadStatus();
       if (conversation.type === 'GROUP') {
@@ -276,18 +341,19 @@ export class ChatDialog {
       }
       afterNextRender(() => this.scrollToEnd(), { injector: this.injector });
     } catch (error) {
-      if (token !== this.loadToken) {
+      if (!this.isCurrent(conversationId, token)) {
         return;
       }
       const problem = toProblem(error);
-      if (problem.status === 404) {
-        this.notFound.set(true);
+      if (problem.status === 404 || problem.status === 403) {
+        this.revokeAccess();
       } else {
         this.error.set(problem.message);
       }
     } finally {
       if (token === this.loadToken) {
         this.loading.set(false);
+        if (this.eventCursor !== null) void this.syncEvents();
       }
     }
   }
@@ -295,6 +361,8 @@ export class ChatDialog {
   protected async loadOlder(): Promise<void> {
     const cursor = this.nextCursor();
     const conversationId = this.id();
+    const token = this.loadToken;
+    const revision = this.historyRevision;
     const scroller = this.scroller()?.nativeElement;
     if (this.loadingOlder() || !this.hasMore() || !cursor || !scroller) {
       return;
@@ -304,12 +372,11 @@ export class ChatDialog {
     this.loadingOlder.set(true);
     try {
       const page = await this.chats.history(conversationId, cursor);
-      if (conversationId !== this.id()) {
+      if (!this.isCurrent(conversationId, token) || revision !== this.historyRevision) {
         return;
       }
-      const seen = new Set(this.messages().map((message) => message.id));
-      const older = oldestFirst(page.items).filter((message) => !seen.has(message.id));
-      this.messages.set([...older, ...this.messages()]);
+      this.messages.update((list) => mergeMessages(list, page.items));
+      this.reconcilePending(page.items);
       this.nextCursor.set(page.nextCursor);
       this.hasMore.set(page.hasMore);
       afterNextRender(
@@ -319,9 +386,12 @@ export class ChatDialog {
         { injector: this.injector },
       );
     } catch (error) {
-      this.error.set(toProblem(error).message);
+      if (this.isCurrent(conversationId, token) && revision === this.historyRevision) {
+        if ([403, 404].includes(toProblem(error).status)) this.revokeAccess();
+        else this.toasts.show(toProblem(error).message, 'error');
+      }
     } finally {
-      this.loadingOlder.set(false);
+      if (this.isCurrent(conversationId, token) && revision === this.historyRevision) this.loadingOlder.set(false);
     }
   }
 
@@ -471,9 +541,10 @@ export class ChatDialog {
 
   /** Имена отправителей и собственная роль (для прав на чужое удаление) — необязательное удобство, без них чат остаётся читаемым. */
   private async loadMembers(conversationId: string): Promise<void> {
+    const token = this.loadToken;
     try {
       const members = await this.groupChats.members(conversationId);
-      if (conversationId !== this.id()) {
+      if (!this.isCurrent(conversationId, token) || this.notFound()) {
         return;
       }
       this.members.set(members);
@@ -524,7 +595,8 @@ export class ChatDialog {
     const slots = this.attachSlots();
     const ready = this.attachReady();
     const allReady = slots.every((s) => ready[s.slotId]);
-    return (hasText || slots.length > 0) && allReady;
+    return !this.loading() && !this.notFound() && !this.conversation()?.blocked && this.textControl.valid
+      && (hasText || slots.length > 0) && allReady;
   }
 
   protected async send(): Promise<void> {
@@ -543,6 +615,8 @@ export class ChatDialog {
       body,
       attachments,
       status: 'pending',
+      offline: false,
+      lastAttemptAt: null,
       errorText: null,
       createdAt: new Date().toISOString(),
     };
@@ -556,28 +630,30 @@ export class ChatDialog {
 
   protected retry(clientMessageId: string): void {
     const item = this.pending().find((p) => p.clientMessageId === clientMessageId);
-    if (!item || item.status === 'pending') {
+    if (!item || item.status === 'pending' || this.notFound() || this.loading() || this.conversation()?.blocked) {
       return;
     }
     this.pending.update((list) =>
-      list.map((p) => (p.clientMessageId === clientMessageId ? { ...p, status: 'pending', errorText: null } : p)),
+      list.map((p) => (p.clientMessageId === clientMessageId ? { ...p, status: 'pending', errorText: null, offline: false } : p)),
     );
     this.dispatch(item);
   }
 
   private dispatch(item: PendingMessage): void {
+    this.pending.update((list) => list.map((p) => p.clientMessageId === item.clientMessageId
+      ? { ...p, lastAttemptAt: Date.now() } : p));
     const ok = this.realtime.publish(this.id(), 'messages', {
       clientMessageId: item.clientMessageId,
       body: item.body,
       attachments: item.attachments.map((a) => a.mediaId),
     });
     if (!ok) {
-      this.markFailed(item.clientMessageId, 'Нет соединения. Повторите после восстановления связи.');
+      this.markFailed(item.clientMessageId, 'Нет соединения. Повторите после восстановления связи.', true);
     }
   }
 
   private onRealtimeEvent(event: RealtimeEvent): void {
-    if (event.conversationId !== this.id()) {
+    if (event.conversationId !== this.id() || this.loading() || this.notFound() || this.destroyed) {
       return;
     }
     if (event.type === 'message.saved') {
@@ -586,11 +662,13 @@ export class ChatDialog {
       const payload = event.payload as FailedPayload;
       this.markFailed(payload.clientMessageId, messageForCode(payload.code));
     } else if (event.type === 'message.created') {
-      void this.syncIncoming();
+      void this.syncEvents();
     } else if (event.type === 'message.edited') {
       this.applyEdited(event.payload as EditedPayload);
     } else if (event.type === 'message.deleted') {
       this.applyDeleted(event.payload as DeletedPayload);
+    } else if (event.type === 'conversation.membership.changed') {
+      void this.syncEvents();
     } else if (event.type === 'typing.changed') {
       this.onTyping(event.payload as TypingPayload);
     }
@@ -628,7 +706,7 @@ export class ChatDialog {
 
   /** Прочтение только для открытого и видимого диалога: фоновая вкладка историю не отмечает. */
   private markRead(): void {
-    if (document.visibilityState !== 'visible') {
+    if (document.visibilityState !== 'visible' || this.notFound() || this.destroyed) {
       return;
     }
     const latest = this.messages().reduce((max, m) => Math.max(max, m.seq), 0);
@@ -642,6 +720,7 @@ export class ChatDialog {
 
   private async refreshReadStatus(): Promise<void> {
     const conversationId = this.id();
+    const token = this.loadToken;
     const messageId = this.lastOwnId();
     if (!messageId) {
       this.readStatus.set(null);
@@ -649,12 +728,12 @@ export class ChatDialog {
     }
     try {
       const status = await this.chats.readStatus(conversationId, messageId);
-      if (conversationId === this.id() && messageId === this.lastOwnId()) {
+      if (this.isCurrent(conversationId, token) && messageId === this.lastOwnId()) {
         this.readStatus.set(status);
       }
     } catch {
       // Подпись прочтения — подсказка: при ошибке она просто не показывается, диалог работает.
-      this.readStatus.set(null);
+      if (this.isCurrent(conversationId, token)) this.readStatus.set(null);
     }
   }
 
@@ -689,11 +768,13 @@ export class ChatDialog {
       body: item.body,
       createdAt: item.createdAt,
       updatedAt: item.createdAt,
-      version: 0,
+      version: -1,
+      clientMessageId: item.clientMessageId,
       deleted: false,
       attachments: item.attachments.map((a, i) => ({ mediaId: a.mediaId, position: i + 1, purpose: a.purpose })),
     };
-    this.messages.update((list) => [...list, message]);
+    this.messages.update((list) => mergeMessages(list, [message]));
+    void this.syncEvents();
     afterNextRender(() => this.scrollToEnd(), { injector: this.injector });
   }
 
@@ -718,31 +799,156 @@ export class ChatDialog {
     );
   }
 
-  private markFailed(clientMessageId: string, text: string): void {
+  private markFailed(clientMessageId: string, text: string, offline = false): void {
     this.pending.update((list) =>
-      list.map((p) => (p.clientMessageId === clientMessageId ? { ...p, status: 'error', errorText: text } : p)),
+      list.map((p) => (p.clientMessageId === clientMessageId ? { ...p, status: 'error', errorText: text, offline } : p)),
     );
   }
 
-  /** `message.created` несёт только идентификаторы — содержимое подтягиваем тем же REST, что и историю. */
-  private async syncIncoming(): Promise<void> {
-    const conversationId = this.id();
-    try {
-      const page = await this.chats.history(conversationId, null);
-      if (conversationId !== this.id()) {
-        return;
+  private connectionLost(): void {
+    this.lastReadSent = 0;
+    this.clearTyping();
+    this.pending.update((list) => list.map((item) => item.status === 'pending'
+      ? { ...item, status: 'error', offline: true, errorText: 'Нет подтверждения. Повторим после восстановления связи.' }
+      : item));
+  }
+
+  /** История подтверждает сохранение даже тогда, когда ACK не дошёл. */
+  private reconcilePending(messages: ChatMessage[]): void {
+    const saved = new Set(messages.filter((m) => m.senderId === this.selfId()).map((m) => m.clientMessageId));
+    this.pending.update((list) => list.filter((p) => !saved.has(p.clientMessageId)));
+  }
+
+  private retryOffline(): void {
+    if (!this.realtime.connected() || this.conversation()?.blocked || this.notFound()) return;
+    for (const item of this.pending()) {
+      if (item.status === 'pending' && item.lastAttemptAt !== null && Date.now() - item.lastAttemptAt >= 10000) {
+        this.markFailed(item.clientMessageId, 'Подтверждение задерживается. Повторяем отправку.', true);
       }
-      const seen = new Set(this.messages().map((m) => m.id));
-      const fresh = oldestFirst(page.items).filter((m) => !seen.has(m.id));
-      if (fresh.length > 0) {
-        this.messages.update((list) => [...list, ...fresh]);
-        afterNextRender(() => this.scrollToEnd(), { injector: this.injector });
-        this.markRead();
-        void this.refreshReadStatus();
-      }
-    } catch {
-      // приход события — необязательное ускорение; обычная перезагрузка диалога тоже подхватит историю
     }
+    for (const item of this.pending()) {
+      if (item.status === 'error' && item.offline) this.retry(item.clientMessageId);
+    }
+  }
+
+  private isCurrent(conversationId: string, token: number): boolean {
+    return !this.destroyed && token === this.loadToken && conversationId === this.id();
+  }
+
+  private revokeAccess(): void {
+    ++this.loadToken;
+    ++this.historyRevision;
+    this.eventCursor = null;
+    this.membershipId = null;
+    this.syncRun = null;
+    this.syncRequested = false;
+    this.notFound.set(true);
+    this.loading.set(false);
+    this.loadingOlder.set(false);
+    this.messages.set([]);
+    this.pending.set([]);
+    this.members.set([]);
+    this.conversation.set(null);
+    this.readStatus.set(null);
+    this.editingId.set(null);
+    this.reasonPromptId.set(null);
+    this.textControl.setValue('');
+    this.attachReady.set({});
+    this.attachSlots.set([]);
+    this.clearTyping();
+  }
+
+  /** Применяем снимки каждой страницы до продвижения курсора, а не только последние 50 сообщений. */
+  private async syncEvents(): Promise<void> {
+    const conversationId = this.id();
+    const token = this.loadToken;
+    if (this.destroyed || this.eventCursor === null || this.loading() || this.notFound()) return;
+    if (this.syncRun !== null) {
+      this.syncRequested = true;
+      return;
+    }
+    const run = {};
+    this.syncRun = run;
+    this.syncRequested = false;
+    let succeeded = false;
+    try {
+      const conversation = await this.chats.get(conversationId);
+      if (!this.isCurrent(conversationId, token)) return;
+      this.conversation.set(conversation);
+      for (let page = 0; page < EVENT_PAGES_MAX; page++) {
+        const events = await this.chats.events(conversationId, this.eventCursor!);
+        if (!this.isCurrent(conversationId, token)) return;
+        if (events.fullSyncRequired || events.membershipId !== this.membershipId) {
+          await this.reloadFull(conversationId, token);
+          if (!this.isCurrent(conversationId, token)) return;
+          continue;
+        }
+        // Ответ старой страницы, запрошенный до этих изменений, уже может быть устаревшим.
+        if (events.messages.length > 0 && this.loadingOlder()) {
+          ++this.historyRevision;
+          this.loadingOlder.set(false);
+        }
+        const current = this.messages();
+        const oldest = current.length ? current[0].seq : 0;
+        // Правка ещё не загруженной старой страницы не создаёт разрыв в показанной истории.
+        const visible = events.messages.filter((m) => !this.hasMore() || m.seq >= oldest);
+        this.messages.update((list) => mergeMessages(list, visible));
+        this.reconcilePending(events.messages);
+        this.eventCursor = events.nextCursor ?? this.eventCursor;
+        if (events.items.some((event) => event.messageId === null)) {
+          void this.loadMembers(conversationId);
+        }
+        if (!events.hasMore) break;
+      }
+      if (!this.isCurrent(conversationId, token)) return;
+      this.syncWarning.set(null);
+      this.retryOffline();
+      this.markRead();
+      void this.refreshReadStatus();
+      succeeded = true;
+    } catch (error) {
+      if (this.isCurrent(conversationId, token)) {
+        if ([403, 404].includes(toProblem(error).status)) this.revokeAccess();
+        else this.syncWarning.set('Не удалось обновить сообщения. Повторяем подключение…');
+      }
+    } finally {
+      if (this.syncRun === run) {
+        this.syncRun = null;
+        if (succeeded && this.syncRequested && this.isCurrent(conversationId, token)) {
+          this.syncTimer = setTimeout(() => {
+            this.syncTimer = null;
+            if (this.isCurrent(conversationId, token)) void this.syncEvents();
+          }, 100);
+        }
+      }
+    }
+  }
+
+  /** Новый снимок истории после истечения журнала; pending не теряется при обычной пересинхронизации. */
+  private async reloadFull(conversationId: string, token: number): Promise<void> {
+    const revision = ++this.historyRevision;
+    this.loadingOlder.set(false);
+    const head = await this.chats.eventsHead(conversationId);
+    if (!this.isCurrent(conversationId, token)) return;
+    if (head.membershipId !== this.membershipId) {
+      this.messages.set([]);
+      this.pending.set([]);
+      this.members.set([]);
+      this.editingId.set(null);
+      this.reasonPromptId.set(null);
+      this.lastReadSent = 0;
+    }
+    const page = await this.chats.history(conversationId, null);
+    if (!this.isCurrent(conversationId, token) || revision !== this.historyRevision) return;
+    const pageIds = new Set(page.items.map((message) => message.id));
+    const live = this.messages().filter((message) => pageIds.has(message.id));
+    this.messages.set(mergeMessages(page.items, live));
+    this.reconcilePending(page.items);
+    this.nextCursor.set(page.nextCursor);
+    this.hasMore.set(page.hasMore);
+    this.eventCursor = head.cursor;
+    this.membershipId = head.membershipId;
+    if (this.conversation()?.type === 'GROUP') void this.loadMembers(conversationId);
   }
 
   private scrollToEnd(): void {

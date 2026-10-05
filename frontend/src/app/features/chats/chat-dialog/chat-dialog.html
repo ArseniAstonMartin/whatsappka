@@ -38,6 +38,10 @@
     </p>
   }
 
+  @if (syncWarning(); as warning) {
+    <p class="notice" role="status">{{ warning }}</p>
+  }
+
   <div class="scroller" #scroller>
     @if (hasMore()) {
       <div class="more">

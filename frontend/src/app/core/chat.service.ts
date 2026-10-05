@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { lastValueFrom } from 'rxjs';
+import { lastValueFrom, timeout } from 'rxjs';
 import { CursorPage } from './profile.service';
 
 export interface LastMessage {
@@ -46,6 +46,31 @@ export interface ChatMessage {
   version: number;
   deleted: boolean;
   attachments: Attachment[];
+  clientMessageId: string | null;
+}
+
+/** Метаданные журнала; актуальные снимки сообщений передаются вместе со страницей событий. */
+export interface ChatEvent {
+  eventSeq: number;
+  type: string;
+  occurredAt: string;
+  actorId: string | null;
+  messageId: string | null;
+  messageSeq: number | null;
+}
+
+export interface ChatEventsPage {
+  items: ChatEvent[];
+  nextCursor: number | null;
+  hasMore: boolean;
+  fullSyncRequired: boolean;
+  membershipId: string;
+  messages: ChatMessage[];
+}
+
+export interface ChatEventsHead {
+  cursor: number;
+  membershipId: string;
 }
 
 /** Сколько участников, имевших доступ к сообщению, уже прочитали его. */
@@ -70,7 +95,7 @@ export class ChatService {
   }
 
   get(conversationId: string): Promise<Conversation> {
-    return lastValueFrom(this.http.get<Conversation>(`/api/v1/conversations/${conversationId}`));
+    return lastValueFrom(this.http.get<Conversation>(`/api/v1/conversations/${conversationId}`).pipe(timeout(10000)));
   }
 
   /** Создаёт или возвращает уже существующий личный диалог с пользователем. */
@@ -80,8 +105,18 @@ export class ChatService {
 
   history(conversationId: string, cursor: string | null): Promise<CursorPage<ChatMessage>> {
     return lastValueFrom(
-      this.http.get<CursorPage<ChatMessage>>(`/api/v1/conversations/${conversationId}/messages`, { params: page(cursor) }),
+      this.http.get<CursorPage<ChatMessage>>(`/api/v1/conversations/${conversationId}/messages`, { params: page(cursor) }).pipe(timeout(10000)),
     );
+  }
+
+  /** Граница журнала событий. Берётся до истории, чтобы ни одно событие не выпало между ними. */
+  eventsHead(conversationId: string): Promise<ChatEventsHead> {
+    return lastValueFrom(this.http.get<ChatEventsHead>(`/api/v1/conversations/${conversationId}/events/head`).pipe(timeout(10000)));
+  }
+
+  events(conversationId: string, cursor: number): Promise<ChatEventsPage> {
+    const params = new HttpParams().set('cursor', String(cursor));
+    return lastValueFrom(this.http.get<ChatEventsPage>(`/api/v1/conversations/${conversationId}/events`, { params }).pipe(timeout(10000)));
   }
 
   readStatus(conversationId: string, messageId: string): Promise<ReadStatus> {
