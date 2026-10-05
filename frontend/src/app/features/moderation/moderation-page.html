@@ -1,0 +1,153 @@
+<h1 class="heading">Модерация</h1>
+
+<div class="tabs" role="tablist" aria-label="Разделы модерации">
+  <button type="button" role="tab" class="tab" [class.active]="tab() === 'queue'" [attr.aria-selected]="tab() === 'queue'" (click)="showTab('queue')">Очередь</button>
+  <button type="button" role="tab" class="tab" [class.active]="tab() === 'journal'" [attr.aria-selected]="tab() === 'journal'" (click)="showTab('journal')">Журнал решений</button>
+</div>
+
+@if (tab() === 'queue') {
+  <div class="filters" role="group" aria-label="Статус жалоб">
+    @for (s of statuses; track s) {
+      <button type="button" class="chip" [class.active]="status() === s" [attr.aria-pressed]="status() === s" (click)="setStatus(s)">
+        {{ statusLabel(s) }}
+      </button>
+    }
+  </div>
+
+  <div class="layout">
+    <section class="queue" aria-label="Жалобы">
+      @if (loading()) {
+        <div class="stack" aria-busy="true">
+          <app-skeleton width="100%" height="56px" />
+          <app-skeleton width="100%" height="56px" />
+        </div>
+      } @else if (error()) {
+        <app-state-panel kind="error" title="Очередь не загрузилась" [message]="error()!">
+          <button type="button" appButton variant="secondary" (click)="loadQueue()">Повторить</button>
+        </app-state-panel>
+      } @else if (items().length === 0) {
+        <app-state-panel kind="empty" title="Жалоб в этом статусе нет" message="Выберите другой статус." />
+      } @else {
+        <ul class="list">
+          @for (item of items(); track item.id) {
+            <li>
+              <button type="button" class="row" [class.active]="selected()?.id === item.id" (click)="select(item)">
+                <span class="kind">{{ kindLabel(item.targetKind) }}</span>
+                <span class="reason">{{ reasonLabel(item.reason) }}</span>
+                <span class="meta">{{ statusLabel(item.status) }} · {{ time(item.createdAt) }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+        @if (hasMore()) {
+          <div class="more">
+            <button type="button" appButton variant="secondary" [busy]="loadingMore()" (click)="loadMore()">Загрузить ещё</button>
+          </div>
+        }
+      }
+    </section>
+
+    <section class="card" aria-label="Карточка жалобы">
+      @if (!selected()) {
+        <app-state-panel kind="empty" title="Выберите жалобу" message="Карточка покажет причину и минимальное доказательство." />
+      } @else {
+        <h2 class="card-title">{{ kindLabel(selected()!.targetKind) }}: {{ reasonLabel(selected()!.reason) }}</h2>
+        <p class="meta">Статус: {{ statusLabel(selected()!.status) }} · подана {{ time(selected()!.createdAt) }}</p>
+
+        @if (evidenceError(); as text) {
+          <p class="notice" role="alert">{{ text }}</p>
+        } @else if (!evidence()) {
+          <app-skeleton width="100%" height="72px" />
+        } @else {
+          <div class="evidence">
+            <h3 class="section-title">Доказательство</h3>
+            @if (evidenceText(evidence()!); as body) {
+              <blockquote class="quote">{{ body }}</blockquote>
+            } @else if (evidence()!.snapshot) {
+              <p class="meta">Текста нет: объект без текста или его данные — только идентификатор.</p>
+            } @else {
+              <p class="meta">Содержимое недоступно: объект удалён или скрыт.</p>
+            }
+          </div>
+
+          @if (selected()!.status === 'OPEN') {
+            <div class="actions">
+              <button type="button" appButton [busy]="busy()" [disabled]="busy()" (click)="take()">Взять в работу</button>
+            </div>
+          }
+
+          @if (mine() || isAdmin()) {
+            <div class="decide">
+              <label class="label" for="moderation-reason">Причина (обязательна для каждого решения)</label>
+              <textarea id="moderation-reason" class="field" rows="3" maxlength="2000" [value]="reason()" (input)="reason.set($any($event.target).value)"></textarea>
+
+              @if (mine()) {
+                <div class="actions">
+                  @if (canHide(selected()!.targetKind)) {
+                    <button type="button" appButton variant="danger" [disabled]="busy()" (click)="hide()">Скрыть материал</button>
+                  }
+                  <button type="button" appButton variant="secondary" [disabled]="busy()" (click)="noAction()">Нарушения нет</button>
+                  <button type="button" appButton variant="ghost" [disabled]="busy()" (click)="reject()">Отклонить жалобу</button>
+                </div>
+              }
+
+              @if (authorId()) {
+                <div class="sanction">
+                  <label class="label" for="sanction-hours">Срок блокировки автора</label>
+                  <select id="sanction-hours" class="field" [value]="durationHours()" (change)="durationHours.set(+$any($event.target).value)">
+                    @for (d of durations; track d.hours) {
+                      <option [value]="d.hours">{{ d.label }}</option>
+                    }
+                  </select>
+                  <div class="actions">
+                    @if (mine()) {
+                      <button type="button" appButton variant="secondary" [disabled]="busy()" (click)="temporarySanction()">Временно ограничить автора</button>
+                    }
+                    @if (isAdmin()) {
+                      <button type="button" appButton variant="danger" [disabled]="busy()" (click)="permanentSanction()">Ограничить навсегда</button>
+                    }
+                  </div>
+                </div>
+              }
+
+              @if (isAdmin() && selected()!.status === 'RESOLVED' && canHide(selected()!.targetKind)) {
+                <div class="actions">
+                  <button type="button" appButton variant="secondary" [disabled]="busy()" (click)="restore()">Восстановить материал</button>
+                </div>
+              }
+            </div>
+          }
+
+          @if (actionError(); as text) {
+            <p class="error" role="alert">{{ text }}</p>
+          }
+        }
+      }
+    </section>
+  </div>
+} @else {
+  <section class="journal" aria-label="Журнал решений">
+    @if (journalLoading() && journal().length === 0) {
+      <app-skeleton width="100%" height="56px" />
+    } @else if (journal().length === 0) {
+      <app-state-panel kind="empty" title="Решений пока нет" message="Здесь появятся записи о взятии в работу и решениях." />
+    } @else {
+      <ul class="list">
+        @for (e of journal(); track e.id) {
+          <li class="entry">
+            <span class="kind">{{ actionLabel(e.action) }}</span>
+            <span class="meta">{{ e.actorUsername }} · {{ time(e.createdAt) }}</span>
+            @if (e.reason) {
+              <span class="reason">Причина: {{ e.reason }}</span>
+            }
+          </li>
+        }
+      </ul>
+      @if (journalHasMore()) {
+        <div class="more">
+          <button type="button" appButton variant="secondary" [busy]="journalLoading()" (click)="loadJournal(false)">Загрузить ещё</button>
+        </div>
+      }
+    }
+  </section>
+}

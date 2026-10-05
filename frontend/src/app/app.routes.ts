@@ -128,8 +128,7 @@ export const routes: Routes = [
         path: 'manage',
         title: 'Управление',
         canActivate: [requireRoles('MODERATOR', 'ADMIN')],
-        loadComponent: section,
-        data: { heading: 'Управление', kind: 'empty', title: 'Очередь пуста', message: 'Здесь появятся жалобы и административные разделы.' },
+        loadComponent: () => import('./features/moderation/moderation-page').then((m) => m.ModerationPage),
       },
       {
         path: 'forbidden',

@@ -1,6 +1,7 @@
 package by.whatsappka.moderation.web;
 
 import by.whatsappka.identity.security.AuthenticatedUser;
+import by.whatsappka.moderation.ModerationJournalService;
 import by.whatsappka.moderation.ModerationService;
 import by.whatsappka.platform.web.ApiV1Controller;
 import by.whatsappka.platform.web.CursorPage;
@@ -23,9 +24,11 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class ModerationQueueController {
 
     private final ModerationService moderation;
+    private final ModerationJournalService journal;
 
-    public ModerationQueueController(ModerationService moderation) {
+    public ModerationQueueController(ModerationService moderation, ModerationJournalService journal) {
         this.moderation = moderation;
+        this.journal = journal;
     }
 
     @GetMapping("/moderation/reports")
@@ -35,6 +38,16 @@ public class ModerationQueueController {
             @RequestParam(name = "limit", required = false) Integer limit
     ) {
         return moderation.queue(status, cursor, limit);
+    }
+
+    /** Журнал решений: только чтение, записи неизменяемы. */
+    @GetMapping("/moderation/actions")
+    public CursorPage<ModerationJournalService.JournalEntry> journal(
+            @RequestParam(name = "reportId", required = false) UUID reportId,
+            @RequestParam(name = "cursor", required = false) String cursor,
+            @RequestParam(name = "limit", required = false) Integer limit
+    ) {
+        return journal.journal(reportId, cursor, limit);
     }
 
     @PostMapping("/moderation/reports/{id}/take")
