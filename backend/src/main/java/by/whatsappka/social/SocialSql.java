@@ -73,4 +73,46 @@ final class SocialSql {
             ORDER BY f.created_at DESC, f.followee_id DESC
             LIMIT ?
             """;
+
+    static final String IS_BLOCKED_EITHER_WAY = """
+            SELECT EXISTS (SELECT 1 FROM user_blocks
+                           WHERE (blocker_id = ? AND blocked_id = ?) OR (blocker_id = ? AND blocked_id = ?))
+            """;
+
+    static final String INSERT_BLOCK = """
+            INSERT INTO user_blocks (blocker_id, blocked_id, created_at)
+            VALUES (?, ?, now())
+            ON CONFLICT (blocker_id, blocked_id) DO NOTHING
+            """;
+
+    static final String DELETE_BLOCK = """
+            DELETE FROM user_blocks WHERE blocker_id = ? AND blocked_id = ?
+            """;
+
+    /** Блокировка удаляет подписки в обе стороны. Вторую строку и старые подписки не восстанавливаем при разблокировке. */
+    static final String DELETE_FOLLOWS_BETWEEN = """
+            DELETE FROM follows
+            WHERE (follower_id = ? AND followee_id = ?) OR (follower_id = ? AND followee_id = ?)
+            """;
+
+    static final String BLOCKS_FIRST = """
+            SELECT u.id, u.username, p.display_name, b.created_at
+            FROM user_blocks b
+            JOIN users u ON u.id = b.blocked_id
+            JOIN user_profiles p ON p.user_id = u.id
+            WHERE b.blocker_id = ?
+            ORDER BY b.created_at DESC, b.blocked_id DESC
+            LIMIT ?
+            """;
+
+    static final String BLOCKS_AFTER = """
+            SELECT u.id, u.username, p.display_name, b.created_at
+            FROM user_blocks b
+            JOIN users u ON u.id = b.blocked_id
+            JOIN user_profiles p ON p.user_id = u.id
+            WHERE b.blocker_id = ?
+              AND (b.created_at, b.blocked_id) < (?, ?)
+            ORDER BY b.created_at DESC, b.blocked_id DESC
+            LIMIT ?
+            """;
 }

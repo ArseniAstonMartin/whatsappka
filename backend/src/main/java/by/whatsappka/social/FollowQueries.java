@@ -1,15 +1,11 @@
 package by.whatsappka.social;
 
-import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.CursorPage;
-import java.nio.charset.StandardCharsets;
 import java.sql.Timestamp;
-import java.time.Instant;
-import java.util.Base64;
-import java.util.List;
 import java.util.UUID;
+import org.springframework.jdbc.core.RowMapper;
+import by.whatsappka.platform.web.PageSize;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
-import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,80 +29,35 @@ public class FollowQueries {
         this.relations = relations;
     }
 
+    static final RowMapper<Cursors.Row> ROW_MAPPER = (rs, n) -> new Cursors.Row(
+            UUID.fromString(rs.getString("id")),
+            rs.getString("username"),
+            rs.getString("display_name"),
+            rs.getTimestamp("created_at").toInstant());
+
     @Transactional(readOnly = true)
-    public CursorPage<UserSummary> followers(UUID targetId, String cursor, int limit) {
-        relations.requireActiveTarget(targetId);
-        return page(cursor, limit, (Keyset key, int size) -> key == null
-                ? jdbc.query(SocialSql.FOLLOWERS_FIRST, ROW, targetId, size + 1)
-                : jdbc.query(SocialSql.FOLLOWERS_AFTER, ROW, targetId, Timestamp.from(key.at()), key.id(), size + 1));
+    public CursorPage<UserSummary> followers(UUID viewerId, UUID targetId, String cursor, int limit) {
+        relations.requireVisibleTo(viewerId, targetId);
+        return Cursors.page(cursor, PageSize.limit(limit), (key, size) -> key == null
+                ? jdbc.query(SocialSql.FOLLOWERS_FIRST, ROW_MAPPER, targetId, size)
+                : jdbc.query(SocialSql.FOLLOWERS_AFTER, ROW_MAPPER, targetId, Timestamp.from(key.at()), key.id(), size));
     }
 
     @Transactional(readOnly = true)
-    public CursorPage<UserSummary> following(UUID targetId, String cursor, int limit) {
-        relations.requireActiveTarget(targetId);
-        return page(cursor, limit, (Keyset key, int size) -> key == null
-                ? jdbc.query(SocialSql.FOLLOWING_FIRST, ROW, targetId, size + 1)
-                : jdbc.query(SocialSql.FOLLOWING_AFTER, ROW, targetId, Timestamp.from(key.at()), key.id(), size + 1));
+    public CursorPage<UserSummary> following(UUID viewerId, UUID targetId, String cursor, int limit) {
+        relations.requireVisibleTo(viewerId, targetId);
+        return Cursors.page(cursor, PageSize.limit(limit), (key, size) -> key == null
+                ? jdbc.query(SocialSql.FOLLOWING_FIRST, ROW_MAPPER, targetId, size)
+                : jdbc.query(SocialSql.FOLLOWING_AFTER, ROW_MAPPER, targetId, Timestamp.from(key.at()), key.id(), size));
     }
 
     @Transactional(readOnly = true)
     public Relations relations(UUID viewerId, UUID targetId) {
-        relations.requireActiveTarget(targetId);
+        relations.requireVisibleTo(viewerId, targetId);
         long followers = jdbc.queryForObject(SocialSql.COUNT_FOLLOWERS, Long.class, targetId);
         long following = jdbc.queryForObject(SocialSql.COUNT_FOLLOWING, Long.class, targetId);
         Boolean followed = jdbc.queryForObject(SocialSql.IS_FOLLOWING, Boolean.class, viewerId, targetId);
         return new Relations(followers, following, Boolean.TRUE.equals(followed), viewerId.equals(targetId));
     }
 
-    private interface PageLoader {
-        List<Row> load(Keyset key, int size);
-    }
-
-    private record Row(UUID id, String username, String displayName, Instant at) {
-    }
-
-    private record Keyset(Instant at, UUID id) {
-    }
-
-    private static final org.springframework.jdbc.core.RowMapper<Row> ROW = (rs, n) -> new Row(
-            UUID.fromString(rs.getString("id")),
-            rs.getString("username"),
-            rs.getString("display_name"),
-            rs.getTimestamp("created_at").toInstant());
-
-    private static CursorPage<UserSummary> page(String cursor, int limit, PageLoader loader) {
-        int size = by.whatsappka.platform.web.PageSize.limit(limit);
-        Keyset key = decode(cursor);
-        List<Row> rows = loader.load(key, size);
-        boolean more = rows.size() > size;
-        List<Row> shown = more ? rows.subList(0, size) : rows;
-        List<UserSummary> items = shown.stream()
-                .map((row) -> new UserSummary(row.id(), row.username(), row.displayName()))
-                .toList();
-        String next = null;
-        if (more) {
-            Row last = shown.get(shown.size() - 1);
-            next = encode(last.at(), last.id());
-        }
-        return new CursorPage<>(items, next, more);
-    }
-
-    static String encode(Instant at, UUID id) {
-        return Base64.getUrlEncoder().withoutPadding()
-                .encodeToString((at.toString() + "|" + id).getBytes(StandardCharsets.UTF_8));
-    }
-
-    static Keyset decode(String cursor) {
-        if (cursor == null || cursor.isBlank()) {
-            return null;
-        }
-        try {
-            String raw = new String(Base64.getUrlDecoder().decode(cursor.trim()), StandardCharsets.UTF_8);
-            int separator = raw.indexOf('|');
-            return new Keyset(Instant.parse(raw.substring(0, separator)), UUID.fromString(raw.substring(separator + 1)));
-        } catch (RuntimeException malformed) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_cursor", "Курсор страницы некорректен",
-                    List.of(), null);
-        }
-    }
 }

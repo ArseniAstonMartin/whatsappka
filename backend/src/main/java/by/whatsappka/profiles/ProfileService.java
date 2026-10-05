@@ -6,6 +6,7 @@ import by.whatsappka.identity.account.UserProfile;
 import by.whatsappka.identity.account.UserProfileRepository;
 import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.FieldErrorDetail;
+import by.whatsappka.social.SocialRelations;
 import java.time.Clock;
 import java.time.ZoneId;
 import java.util.List;
@@ -21,19 +22,27 @@ public class ProfileService {
 
     private final UserAccountRepository users;
     private final UserProfileRepository profiles;
+    private final SocialRelations relations;
     private final Clock clock;
 
-    public ProfileService(UserAccountRepository users, UserProfileRepository profiles, Clock clock) {
+    public ProfileService(
+            UserAccountRepository users,
+            UserProfileRepository profiles,
+            SocialRelations relations,
+            Clock clock
+    ) {
         this.users = users;
         this.profiles = profiles;
+        this.relations = relations;
         this.clock = clock;
     }
 
     @Transactional(readOnly = true)
-    public PublicProfile publicProfile(String username) {
+    public PublicProfile publicProfile(UUID viewerId, String username) {
         UserAccount account = users.findByUsernameIgnoreCase(username)
                 .filter(UserAccount::isActive)
                 .orElseThrow(ApiException::notFound);
+        relations.requireVisibleTo(viewerId, account.id());
         UserProfile profile = profiles.findById(account.id()).orElseThrow(ApiException::notFound);
         return new PublicProfile(
                 account.id(),

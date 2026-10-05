@@ -22,8 +22,11 @@ public class ProfileController {
     }
 
     @GetMapping("/users/{username}")
-    public PublicProfile publicProfile(@PathVariable("username") String username) {
-        return profiles.publicProfile(username);
+    public PublicProfile publicProfile(
+            @PathVariable("username") String username,
+            @AuthenticationPrincipal AuthenticatedUser viewer
+    ) {
+        return profiles.publicProfile(viewer.userId(), username);
     }
 
     @GetMapping("/me/profile")

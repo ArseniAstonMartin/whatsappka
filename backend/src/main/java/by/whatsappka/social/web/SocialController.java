@@ -42,19 +42,21 @@ public class SocialController {
     @GetMapping("/users/{id}/followers")
     public CursorPage<FollowQueries.UserSummary> followers(
             @PathVariable("id") UUID id,
+            @AuthenticationPrincipal AuthenticatedUser viewer,
             @RequestParam(name = "cursor", required = false) String cursor,
             @RequestParam(name = "limit", required = false) Integer limit
     ) {
-        return queries.followers(id, cursor, limitOrDefault(limit));
+        return queries.followers(viewer.userId(), id, cursor, limitOrDefault(limit));
     }
 
     @GetMapping("/users/{id}/following")
     public CursorPage<FollowQueries.UserSummary> following(
             @PathVariable("id") UUID id,
+            @AuthenticationPrincipal AuthenticatedUser viewer,
             @RequestParam(name = "cursor", required = false) String cursor,
             @RequestParam(name = "limit", required = false) Integer limit
     ) {
-        return queries.following(id, cursor, limitOrDefault(limit));
+        return queries.following(viewer.userId(), id, cursor, limitOrDefault(limit));
     }
 
     @GetMapping("/users/{id}/relations")
