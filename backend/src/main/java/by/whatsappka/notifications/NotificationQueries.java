@@ -29,13 +29,21 @@ public class NotificationQueries {
     public record Target(NotificationType.TargetKind kind, UUID id) {
     }
 
+    /**
+     * Куда вести по уведомлению: вид и идентификатор раздела. Считается на сервере и только для видимой цели;
+     * для сообщества — slug, так как маршрут открывается по нему.
+     */
+    public record Link(String kind, String id, String slug) {
+    }
+
     public record NotificationView(
             UUID id,
             NotificationType type,
             Instant createdAt,
             boolean read,
             Actor actor,
-            Target target
+            Target target,
+            Link link
     ) {
     }
 
@@ -50,7 +58,9 @@ public class NotificationQueries {
             rs.getBoolean("actor_blocked"),
             rs.getString("target_kind"),
             rs.getObject("target_id") == null ? null : UUID.fromString(rs.getString("target_id")),
-            rs.getBoolean("target_visible"));
+            rs.getBoolean("target_visible"),
+            rs.getObject("link_post_id") == null ? null : UUID.fromString(rs.getString("link_post_id")),
+            rs.getString("link_group_slug"));
 
     private final JdbcTemplate jdbc;
 
@@ -86,7 +96,9 @@ public class NotificationQueries {
             boolean actorBlocked,
             String targetKind,
             UUID targetId,
-            boolean targetVisible
+            boolean targetVisible,
+            UUID linkPostId,
+            String linkGroupSlug
     ) {
         NotificationView toView() {
             Actor actor = actorId == null || actorBlocked
@@ -95,7 +107,22 @@ public class NotificationQueries {
             Target target = targetId == null || !targetVisible
                     ? null
                     : new Target(NotificationType.TargetKind.valueOf(targetKind), targetId);
-            return new NotificationView(id, type, createdAt, read, actor, target);
+            return new NotificationView(id, type, createdAt, read, actor, target, link(actor, target));
+        }
+
+        /** Ссылка только к видимой цели. Подписка ведёт к актору, его профиль виден по блокировке. */
+        private Link link(Actor actor, Target target) {
+            if (target == null) {
+                return null;
+            }
+            return switch (type) {
+                case FOLLOW -> actor == null ? null : new Link("USER", null, actor.username());
+                case MESSAGE, CHAT_INVITATION -> new Link("CHAT", targetId.toString(), null);
+                case COMMENT, REPLY, REACTION -> linkPostId == null ? null : new Link("POST", linkPostId.toString(), null);
+                case COMMUNITY_INVITATION, JOIN_REQUEST, JOIN_RESULT ->
+                        linkGroupSlug == null ? null : new Link("GROUP", null, linkGroupSlug);
+                case SYSTEM -> null;
+            };
         }
     }
 

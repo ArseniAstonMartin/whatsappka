@@ -35,8 +35,14 @@ public class NotificationRealtimeBridge implements MessageListener {
             JsonNode body = mapper.readTree(message.getBody());
             UUID userId = UUID.fromString(body.get("userId").asText());
             UUID notificationId = UUID.fromString(body.get("notificationId").asText());
+            Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("id", notificationId.toString());
+            payload.put("type", body.get("type").asText());
+            if (body.hasNonNull("targetId")) {
+                payload.put("targetId", body.get("targetId").asText());
+            }
             realtime.deliver(userId, new RealtimeEvent(UUID.randomUUID(), "notification.created", Instant.now(),
-                    notificationId, 0L, null, null, Map.of("id", notificationId.toString(), "type", body.get("type").asText())));
+                    notificationId, 0L, null, null, payload));
         } catch (Exception e) {
             log.warn("Некорректный сигнал уведомления пропущен: {}", e.getClass().getSimpleName());
         }

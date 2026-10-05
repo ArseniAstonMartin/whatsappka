@@ -5,6 +5,7 @@ import { AuthService } from '../core/auth.service';
 import { ConnectionState } from '../core/connection-state';
 import { AppButton } from '../shared/ui/button/app-button';
 import { CurrentUser } from '../core/current-user';
+import { NotificationCenter } from '../core/notification-center.service';
 
 export interface NavItem {
   path: string;
@@ -36,6 +37,8 @@ export class AppShell {
   private readonly user = inject(CurrentUser);
   protected readonly connection = inject(ConnectionState);
   private readonly auth = inject(AuthService);
+  /** Создание центра запускает синхронизацию счётчика и подписку на события. */
+  protected readonly center = inject(NotificationCenter);
 
   protected readonly visibleItems = computed(() =>
     NAV_ITEMS.filter((item) => !item.roles || this.user.hasAnyRole(item.roles)),

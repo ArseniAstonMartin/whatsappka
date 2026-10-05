@@ -49,7 +49,7 @@ public class NotificationOutboxConsumer implements OutboxConsumer {
                 : NotificationPlanner.plan(event.type(), event.payload(), new SqlLookups())) {
             notifications.notify(planned.recipient(), eventKey, planned.type(), planned.actor(), planned.kind(),
                             planned.targetId(), planned.messageSeq())
-                    .ifPresent((id) -> realtime.published(planned.recipient(), id, planned.type()));
+                    .ifPresent((id) -> realtime.published(planned.recipient(), id, planned.type(), planned.targetId()));
         }
     }
 

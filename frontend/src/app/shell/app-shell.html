@@ -32,6 +32,20 @@
       <a class="brand" routerLink="/feed">Ватсапка</a>
       <nav aria-label="Дополнительные разделы">
         <ul class="top-links">
+          <li>
+            <a
+              class="icon-link bell"
+              routerLink="/notifications"
+              routerLinkActive="active"
+              [attr.aria-label]="center.unread() > 0 ? 'Уведомления, непрочитанных: ' + center.unread() : 'Уведомления'"
+              [attr.title]="'Уведомления'"
+            >
+              <app-icon name="bell" [size]="24" />
+              @if (center.unread() > 0) {
+                <span class="bell-badge" aria-hidden="true">{{ center.unread() > 99 ? '99+' : center.unread() }}</span>
+              }
+            </a>
+          </li>
           @for (item of secondaryItems(); track item.path) {
             <li>
               <a class="icon-link" [routerLink]="['/', item.path]" [attr.aria-label]="item.label" [attr.title]="item.label">

@@ -1,0 +1,47 @@
+<header class="head">
+  <h1 class="heading">Уведомления</h1>
+  <button type="button" appButton variant="secondary" [busy]="bulkBusy()" [disabled]="bulkBusy() || items().length === 0" (click)="markAll()">
+    Отметить все прочитанными
+  </button>
+</header>
+
+@if (notice(); as text) {
+  <p class="notice" role="status">{{ text }}</p>
+}
+
+@if (loading()) {
+  <div class="stack" aria-busy="true">
+    <app-skeleton width="100%" height="64px" />
+    <app-skeleton width="100%" height="64px" />
+  </div>
+} @else if (error()) {
+  <app-state-panel kind="error" title="Не удалось загрузить уведомления" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="start()">Повторить</button>
+  </app-state-panel>
+} @else if (items().length === 0) {
+  <app-state-panel kind="empty" title="Уведомлений пока нет" message="Здесь появятся подписки, сообщения, приглашения и ответы." />
+} @else {
+  <ul class="list">
+    @for (item of items(); track item.id) {
+      <li>
+        <button type="button" class="row" [class.unread]="!item.read" (click)="open(item)">
+          <span class="dot" aria-hidden="true"></span>
+          <span class="body">
+            <span class="line"><strong class="who">{{ who(item) }}</strong> {{ label(item) }}</span>
+            <time class="time" [attr.datetime]="item.createdAt">{{ time(item.createdAt) }}</time>
+          </span>
+          @if (!item.read) {
+            <span class="visually-hidden">Не прочитано</span>
+          }
+        </button>
+      </li>
+    }
+  </ul>
+  @if (hasMore()) {
+    <div class="more">
+      <button type="button" appButton variant="secondary" [busy]="loadingMore()" (click)="loadMore()">
+        {{ loadingMore() ? 'Загружаем…' : 'Загрузить ещё' }}
+      </button>
+    </div>
+  }
+}

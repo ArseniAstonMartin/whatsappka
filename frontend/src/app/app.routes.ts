@@ -96,6 +96,11 @@ export const routes: Routes = [
         ],
       },
       {
+        path: 'notifications',
+        title: 'Уведомления',
+        loadComponent: () => import('./features/notifications/notifications-page').then((m) => m.NotificationsPage),
+      },
+      {
         path: 'profile',
         title: 'Мой профиль',
         loadComponent: () => import('./features/profile/own-profile/own-profile').then((m) => m.OwnProfilePage),

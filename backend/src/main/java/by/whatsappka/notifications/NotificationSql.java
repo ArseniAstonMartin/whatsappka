@@ -59,7 +59,12 @@ final class NotificationSql {
                        WHEN 'JOIN_RESULT' THEN EXISTS (SELECT 1 FROM groups g
                                                        WHERE g.id = n.target_id AND g.deleted_at IS NULL)
                        ELSE false
-                   END AS target_visible
+                   END AS target_visible,
+                   CASE WHEN n.target_kind = 'POST' THEN n.target_id
+                        WHEN n.target_kind = 'COMMENT' THEN (SELECT c.post_id FROM comments c WHERE c.id = n.target_id)
+                   END AS link_post_id,
+                   CASE WHEN n.target_kind = 'COMMUNITY' THEN (SELECT g.slug FROM groups g WHERE g.id = n.target_id)
+                   END AS link_group_slug
             FROM notifications n
             LEFT JOIN users a ON a.id = n.actor_id
             LEFT JOIN user_profiles p ON p.user_id = a.id
