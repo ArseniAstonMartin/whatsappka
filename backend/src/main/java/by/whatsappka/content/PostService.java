@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -49,16 +50,17 @@ public class PostService {
     }
 
     public record PostView(
-            UUID id, String body, String status, UUID groupId, List<UUID> mediaIds,
+            UUID id, String body, String status, UUID groupId, List<UUID> mediaIds, List<String> hashtags,
             long version, Instant createdAt, Instant updatedAt, String scheduleFailureReason
     ) {
     }
 
     @Transactional
-    public UUID create(UUID authorId, UUID groupId, String rawBody, List<UUID> rawMedia) {
+    public UUID create(UUID authorId, UUID groupId, String rawBody, List<UUID> rawMedia, List<String> rawHashtags) {
         String body = PostRules.normalizeBody(rawBody);
         List<UUID> media = rawMedia == null ? List.of() : rawMedia;
         PostRules.validateMedia(media);
+        List<String> hashtags = PostRules.normalizeHashtags(rawHashtags);
         if (groupId != null && !communities.isActiveMember(groupId, authorId)) {
             throw ApiException.forbidden();
         }
@@ -68,15 +70,17 @@ public class PostService {
                         + "VALUES (?, ?, ?, ?, 'DRAFT', ?, ?)",
                 id, authorId, groupId, body, Timestamp.from(now), Timestamp.from(now));
         attach(id, authorId, media);
+        syncHashtags(id, hashtags);
         return id;
     }
 
     /** Правка доступна для черновика и уже опубликованной записи; published_at при этом не трогается. */
     @Transactional
-    public void update(UUID postId, UUID authorId, long expectedVersion, String rawBody, List<UUID> rawMedia) {
+    public void update(UUID postId, UUID authorId, long expectedVersion, String rawBody, List<UUID> rawMedia, List<String> rawHashtags) {
         String body = PostRules.normalizeBody(rawBody);
         List<UUID> media = rawMedia == null ? List.of() : rawMedia;
         PostRules.validateMedia(media);
+        List<String> hashtags = PostRules.normalizeHashtags(rawHashtags);
         int updated = jdbc.update(
                 "UPDATE posts SET body = ?, version = version + 1, updated_at = ?, schedule_failure_reason = NULL "
                         + "WHERE id = ? AND author_id = ? AND status IN ('DRAFT', 'PUBLISHED') AND deleted_at IS NULL AND version = ?",
@@ -87,6 +91,7 @@ public class PostService {
         jdbc.update("DELETE FROM media_links WHERE link_type = ? AND link_id = ?", MediaLinkType.POST_ATTACHMENT.name(), postId);
         jdbc.update("DELETE FROM post_media WHERE post_id = ?", postId);
         attach(postId, authorId, media);
+        syncHashtags(postId, hashtags);
     }
 
     /**
@@ -152,7 +157,11 @@ public class PostService {
         List<UUID> mediaIds = jdbc.query(
                 "SELECT media_id FROM post_media WHERE post_id = ? ORDER BY position",
                 (rs, n) -> UUID.fromString(rs.getString("media_id")), postId);
-        return new PostView(row.id(), row.body(), row.status(), row.groupId(), mediaIds,
+        List<String> hashtags = jdbc.query(
+                "SELECT h.normalized_name FROM post_hashtags ph JOIN hashtags h ON h.id = ph.hashtag_id "
+                        + "WHERE ph.post_id = ? ORDER BY h.normalized_name",
+                (rs, n) -> rs.getString("normalized_name"), postId);
+        return new PostView(row.id(), row.body(), row.status(), row.groupId(), mediaIds, hashtags,
                 row.version(), row.createdAt(), row.updatedAt(), row.scheduleFailureReason());
     }
 
@@ -186,6 +195,32 @@ public class PostService {
             jdbc.update("INSERT INTO post_media (post_id, media_id, position) VALUES (?, ?, ?)", postId, mediaId, i + 1);
             jdbc.update("INSERT INTO media_links (media_id, link_type, link_id, created_at) VALUES (?, ?, ?, ?)",
                     mediaId, MediaLinkType.POST_ATTACHMENT.name(), postId, Timestamp.from(clock.instant()));
+        }
+    }
+
+    /** Полная замена связей поста с хештегами на переданный нормализованный набор. */
+    private void syncHashtags(UUID postId, List<String> normalizedTags) {
+        jdbc.update("DELETE FROM post_hashtags WHERE post_id = ?", postId);
+        for (String tag : normalizedTags) {
+            UUID hashtagId = upsertHashtag(tag);
+            jdbc.update("INSERT INTO post_hashtags (post_id, hashtag_id) VALUES (?, ?)", postId, hashtagId);
+        }
+    }
+
+    private UUID upsertHashtag(String normalized) {
+        List<UUID> existing = jdbc.query("SELECT id FROM hashtags WHERE normalized_name = ?",
+                (rs, n) -> UUID.fromString(rs.getString("id")), normalized);
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+        UUID id = UUID.randomUUID();
+        try {
+            jdbc.update("INSERT INTO hashtags (id, normalized_name, display_name, created_at) VALUES (?, ?, ?, ?)",
+                    id, normalized, normalized, Timestamp.from(clock.instant()));
+            return id;
+        } catch (DuplicateKeyException concurrentInsert) {
+            return jdbc.query("SELECT id FROM hashtags WHERE normalized_name = ?",
+                    (rs, n) -> UUID.fromString(rs.getString("id")), normalized).get(0);
         }
     }
 

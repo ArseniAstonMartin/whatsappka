@@ -47,7 +47,7 @@ public class PostController {
 
     @PostMapping("/posts")
     public ResponseEntity<PostRef> create(@RequestBody CreateRequest request, @AuthenticationPrincipal AuthenticatedUser viewer) {
-        UUID id = posts.create(viewer.userId(), request.groupId(), request.body(), request.media());
+        UUID id = posts.create(viewer.userId(), request.groupId(), request.body(), request.media(), request.hashtags());
         return ResponseEntity.status(HttpStatus.CREATED).body(new PostRef(id));
     }
 
@@ -62,7 +62,7 @@ public class PostController {
             @RequestBody UpdateRequest request,
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
-        posts.update(id, viewer.userId(), request.version(), request.body(), request.media());
+        posts.update(id, viewer.userId(), request.version(), request.body(), request.media(), request.hashtags());
         return ResponseEntity.noContent().build();
     }
 
@@ -117,10 +117,10 @@ public class PostController {
         return posts.drafts(viewer.userId(), cursor, limit);
     }
 
-    public record CreateRequest(String body, UUID groupId, List<UUID> media) {
+    public record CreateRequest(String body, UUID groupId, List<UUID> media, List<String> hashtags) {
     }
 
-    public record UpdateRequest(String body, List<UUID> media, long version) {
+    public record UpdateRequest(String body, List<UUID> media, List<String> hashtags, long version) {
     }
 
     public record ScheduleRequest(Instant publishAt) {
