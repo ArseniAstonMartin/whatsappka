@@ -35,7 +35,7 @@ public final class NotificationRules {
         boolean valid = switch (type) {
             case SYSTEM -> kind == null && targetId == null && actor == null;
             case FOLLOW -> type.allowsTarget(kind) && recipient.equals(targetId) && actor != null;
-            case COMMENT, REPLY, REACTION -> type.allowsTarget(kind) && targetId != null && actor != null;
+            case COMMENT, REPLY, REACTION, MESSAGE -> type.allowsTarget(kind) && targetId != null && actor != null;
             default -> type.allowsTarget(kind) && targetId != null;
         };
         if (!valid) {

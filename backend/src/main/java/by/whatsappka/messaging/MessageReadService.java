@@ -1,5 +1,6 @@
 package by.whatsappka.messaging;
 
+import by.whatsappka.notifications.NotificationService;
 import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.FieldErrorDetail;
 import java.util.List;
@@ -19,9 +20,11 @@ public class MessageReadService {
     }
 
     private final JdbcTemplate jdbc;
+    private final NotificationService notifications;
 
-    public MessageReadService(JdbcTemplate jdbc) {
+    public MessageReadService(JdbcTemplate jdbc, NotificationService notifications) {
         this.jdbc = jdbc;
+        this.notifications = notifications;
     }
 
     @Transactional
@@ -34,6 +37,8 @@ public class MessageReadService {
         if (updated.isEmpty()) {
             throw ApiException.notFound();
         }
+        // Снимаем уведомления по фактическому прогрессу, а не по запрошенному seq: он мог быть ограничен чатом.
+        notifications.markChatRead(viewer, conversationId, updated.get(0));
         return unread(viewer, conversationId);
     }
 

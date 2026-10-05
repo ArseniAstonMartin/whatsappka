@@ -10,6 +10,7 @@ public enum NotificationType {
     CHAT_INVITATION(EnumSet.of(TargetKind.CONVERSATION)),
     COMMUNITY_INVITATION(EnumSet.of(TargetKind.COMMUNITY)),
     JOIN_REQUEST(EnumSet.of(TargetKind.COMMUNITY)),
+    JOIN_RESULT(EnumSet.of(TargetKind.COMMUNITY)),
     COMMENT(EnumSet.of(TargetKind.POST)),
     REPLY(EnumSet.of(TargetKind.COMMENT)),
     REACTION(EnumSet.of(TargetKind.POST, TargetKind.COMMENT)),

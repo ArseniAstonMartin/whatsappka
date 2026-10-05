@@ -30,9 +30,12 @@ public class NotificationService {
      */
     @Transactional
     public Optional<UUID> notify(UUID recipient, String eventKey, NotificationType type, UUID actor,
-                                 NotificationType.TargetKind kind, UUID targetId) {
+                                 NotificationType.TargetKind kind, UUID targetId, Long messageSeq) {
         if (eventKey == null || eventKey.isBlank()) {
             throw new IllegalArgumentException("event key is required");
+        }
+        if ((type == NotificationType.MESSAGE) != (messageSeq != null)) {
+            throw new IllegalArgumentException("message_seq is required exactly for MESSAGE notifications");
         }
         NotificationRules.requireValidTarget(recipient, type, actor, kind, targetId);
         if (NotificationRules.isSelf(recipient, actor) || !enabled(recipient, type)) {
@@ -40,7 +43,7 @@ public class NotificationService {
         }
         UUID id = UUID.randomUUID();
         int inserted = jdbc.update(NotificationSql.INSERT_NOTIFICATION, id, recipient, eventKey, type.name(),
-                actor, kind == null ? null : kind.name(), targetId);
+                actor, kind == null ? null : kind.name(), targetId, messageSeq);
         return inserted == 1 ? Optional.of(id) : Optional.empty();
     }
 
@@ -74,6 +77,12 @@ public class NotificationService {
         if (jdbc.update(NotificationSql.MARK_READ, notificationId, viewer) == 0) {
             throw ApiException.notFound();
         }
+    }
+
+    /** Прочтение чата до seq: возвращает число снятых уведомлений о сообщениях. */
+    @Transactional
+    public int markChatRead(UUID viewer, UUID conversationId, long seq) {
+        return jdbc.update(NotificationSql.MARK_CHAT_READ, viewer, conversationId, seq);
     }
 
     @Transactional
