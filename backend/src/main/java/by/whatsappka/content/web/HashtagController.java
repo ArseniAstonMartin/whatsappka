@@ -1,7 +1,7 @@
 package by.whatsappka.content.web;
 
 import by.whatsappka.content.HashtagService;
-import by.whatsappka.content.HashtagService.PostSummaryPublic;
+import by.whatsappka.content.PostSummaryPublic;
 import by.whatsappka.identity.security.AuthenticatedUser;
 import by.whatsappka.platform.web.ApiV1Controller;
 import by.whatsappka.platform.web.CursorPage;
