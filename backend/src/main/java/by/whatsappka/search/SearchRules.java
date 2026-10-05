@@ -57,6 +57,12 @@ public final class SearchRules {
         return prefix ? escaped + "%" : "%" + escaped + "%";
     }
 
+    /** Хештег ищется с решёткой или без: решётка в начале запроса не является частью имени. */
+    public static String hashtagQuery(String raw) {
+        String text = raw == null ? "" : raw.strip();
+        return text.startsWith("#") ? text.substring(1) : text;
+    }
+
     public static int pageSize(Integer requested) {
         if (requested == null) {
             return PAGE_DEFAULT;
