@@ -1,0 +1,60 @@
+@if (loading()) {
+  <div class="stack" aria-busy="true">
+    <app-skeleton width="50%" height="28px" />
+    <app-skeleton width="70%" height="48px" />
+    <app-skeleton width="60%" height="48px" />
+  </div>
+} @else if (notFound()) {
+  <app-state-panel kind="not-found" title="Диалог недоступен" message="Чат не найден или вы больше не участник." />
+} @else if (error()) {
+  <app-state-panel kind="error" title="Не удалось открыть диалог" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="start(id())">Повторить</button>
+  </app-state-panel>
+} @else if (conversation(); as chat) {
+  <header class="dialog-head">
+    <a class="back" routerLink="/chats">Все чаты</a>
+    <app-avatar [name]="chat.otherDisplayName" [size]="40" />
+    <div class="who">
+      <a class="name" [routerLink]="['/users', chat.otherUsername]">{{ chat.otherDisplayName }}</a>
+      <span class="username">&#64;{{ chat.otherUsername }}</span>
+    </div>
+  </header>
+
+  @if (chat.blocked) {
+    <p class="notice" role="status">
+      Между вами есть блокировка. История сохранена, новые личные сообщения недоступны.
+    </p>
+  }
+
+  <div class="scroller" #scroller>
+    @if (hasMore()) {
+      <div class="more">
+        <button type="button" appButton variant="secondary" [busy]="loadingOlder()" (click)="loadOlder()">
+          {{ loadingOlder() ? 'Загружаем…' : 'Загрузить более ранние' }}
+        </button>
+      </div>
+    }
+
+    @if (messages().length === 0) {
+      <app-state-panel kind="empty" title="Сообщений пока нет" message="Здесь появится история диалога." />
+    } @else {
+      <ol class="messages">
+        @for (message of messages(); track message.id) {
+          <li class="msg" [class.own]="isOwn(message)" [class.deleted]="message.deleted">
+            @if (message.deleted) {
+              <p class="muted">Сообщение удалено</p>
+            } @else {
+              @if (message.body) {
+                <p class="text">{{ message.body }}</p>
+              }
+              @for (attachment of message.attachments; track attachment.mediaId) {
+                <p class="attachment">{{ purposeLabel(attachment.purpose) }}</p>
+              }
+            }
+            <time class="time" [attr.datetime]="message.createdAt">{{ time(message.createdAt) }}</time>
+          </li>
+        }
+      </ol>
+    }
+  </div>
+}

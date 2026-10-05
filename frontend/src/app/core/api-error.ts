@@ -34,6 +34,9 @@ const MESSAGES: Record<string, string> = {
   media_in_use: 'Файл привязан и не может быть удалён',
   purpose_mismatch: 'Файл не подходит для этого места',
   invalid_purpose: 'Неизвестное назначение файла',
+  invalid_cursor: 'Не удалось открыть эту часть списка. Обновите страницу.',
+  self_chat: 'Нельзя написать самому себе.',
+  interaction_blocked: 'Отправка недоступна: между вами блокировка.',
 };
 
 export function toProblem(error: unknown): ApiProblem {

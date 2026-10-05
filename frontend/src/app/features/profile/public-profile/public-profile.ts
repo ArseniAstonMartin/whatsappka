@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { ProfileService, PublicProfile, Relations } from '../../../core/profile.service';
+import { ChatService } from '../../../core/chat.service';
 import { toProblem } from '../../../core/api-error';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
 import { AppButton } from '../../../shared/ui/button/app-button';
@@ -7,7 +8,7 @@ import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { StatePanel } from '../../../shared/state-panel/state-panel';
 import { ProfileHeader } from '../profile-header/profile-header';
 import { ConfirmService } from '../../../shared/ui/confirm-dialog/confirm.service';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 /**
  * Чужой профиль по имени пользователя. Действие подписки меняет состояние только после ответа сервера;
@@ -23,6 +24,8 @@ export class PublicProfilePage implements OnInit {
   private readonly profiles = inject(ProfileService);
   private readonly toasts = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
+  private readonly chats = inject(ChatService);
+  private readonly router = inject(Router);
 
   readonly username = input.required<string>();
 
@@ -32,6 +35,7 @@ export class PublicProfilePage implements OnInit {
   protected readonly notFound = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly followBusy = signal(false);
+  protected readonly writeBusy = signal(false);
 
   protected readonly followLabel = computed(() => {
     const r = this.relations();
@@ -79,6 +83,27 @@ export class PublicProfilePage implements OnInit {
       this.toasts.show(toProblem(error).message, 'error');
     } finally {
       this.followBusy.set(false);
+    }
+  }
+
+  /** Открывает личный диалог; если его ещё нет, сервер создаёт его. Блокировка сервером отвечает 404. */
+  protected async write(): Promise<void> {
+    const profile = this.profile();
+    if (!profile || this.writeBusy()) {
+      return;
+    }
+    this.writeBusy.set(true);
+    try {
+      const { id } = await this.chats.open(profile.id);
+      await this.router.navigate(['/chats', id]);
+    } catch (error) {
+      const problem = toProblem(error);
+      this.toasts.show(
+        problem.status === 404 ? 'Написать этому пользователю нельзя: возможно, есть блокировка.' : problem.message,
+        'error',
+      );
+    } finally {
+      this.writeBusy.set(false);
     }
   }
 

@@ -39,6 +39,9 @@
         >
           {{ followLabel() }}
         </button>
+        <button type="button" appButton variant="secondary" [busy]="writeBusy()" [disabled]="writeBusy()" (click)="write()">
+          Написать
+        </button>
         <button type="button" appButton variant="ghost" [disabled]="followBusy()" (click)="block()">
           Заблокировать
         </button>

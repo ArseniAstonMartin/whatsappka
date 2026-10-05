@@ -1,0 +1,122 @@
+:host {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-h2);
+  line-height: 1.25;
+}
+
+.filter {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.filter-label {
+  font-size: var(--font-size-small, 14px);
+  color: var(--color-text-muted);
+}
+
+.filter-input {
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.filter-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  text-decoration: none;
+  background: var(--color-surface);
+}
+
+.row:hover {
+  background: var(--color-primary-soft);
+}
+
+.row.active {
+  background: var(--color-primary-soft);
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.body {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+}
+
+.title-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flag {
+  font-size: 12px;
+  color: var(--color-danger);
+}
+
+.preview {
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.badge {
+  flex: none;
+  min-width: 22px;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 22px;
+  text-align: center;
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+}

@@ -1,0 +1,28 @@
+:host {
+  display: block;
+}
+
+.chats {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: var(--space-4);
+  min-height: 60vh;
+}
+
+.pane {
+  min-width: 0;
+}
+
+@media (max-width: 759px) {
+  .chats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .chats.has-chat .list-pane {
+    display: none;
+  }
+
+  .chats:not(.has-chat) .dialog-pane {
+    display: none;
+  }
+}

@@ -42,8 +42,20 @@ export const routes: Routes = [
       {
         path: 'chats',
         title: 'Сообщения',
-        loadComponent: section,
-        data: { heading: 'Сообщения', kind: 'empty', title: 'Диалогов пока нет', message: 'Здесь появятся ваши личные и групповые чаты.' },
+        loadComponent: () => import('./features/chats/chats-layout/chats-layout').then((m) => m.ChatsLayout),
+        children: [
+          {
+            path: '',
+            pathMatch: 'full',
+            loadComponent: section,
+            data: { heading: 'Сообщения', kind: 'empty', title: 'Выберите диалог', message: 'Слева — ваши личные диалоги. Групповые чаты появятся здесь позже.' },
+          },
+          {
+            path: ':id',
+            title: 'Диалог',
+            loadComponent: () => import('./features/chats/chat-dialog/chat-dialog').then((m) => m.ChatDialog),
+          },
+        ],
       },
       {
         path: 'profile',

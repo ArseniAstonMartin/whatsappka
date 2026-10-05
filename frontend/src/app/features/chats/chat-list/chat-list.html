@@ -1,0 +1,66 @@
+<header class="head">
+  <h1 class="heading">Сообщения</h1>
+</header>
+
+<div class="filter">
+  <label class="filter-label" for="chat-filter">Фильтр по имени</label>
+  <input
+    id="chat-filter"
+    class="filter-input"
+    type="search"
+    autocomplete="off"
+    placeholder="Имя или логин собеседника"
+    [value]="query()"
+    (input)="query.set($any($event.target).value)"
+  />
+  <p class="filter-hint">Фильтр ищет только среди загруженных чатов по имени собеседника. Поиск по сообщениям появится в разделе «Поиск».</p>
+</div>
+
+@if (loading()) {
+  <div class="stack" aria-busy="true">
+    <app-skeleton width="100%" height="64px" />
+    <app-skeleton width="100%" height="64px" />
+  </div>
+} @else if (error()) {
+  <app-state-panel kind="error" title="Не удалось загрузить чаты" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="start()">Повторить</button>
+  </app-state-panel>
+} @else if (items().length === 0) {
+  <app-state-panel kind="empty" title="Диалогов пока нет" message="Откройте профиль пользователя и нажмите «Написать»." />
+} @else if (visible().length === 0) {
+  <app-state-panel kind="empty" title="Ничего не найдено" message="Среди загруженных чатов нет совпадений." />
+  @if (hasMore()) {
+    <div class="more">
+      <button type="button" appButton variant="secondary" [busy]="loadingMore()" (click)="loadMore()">Загрузить ещё</button>
+    </div>
+  }
+} @else {
+  <ul class="list">
+    @for (chat of visible(); track chat.id) {
+      <li>
+        <a class="row" [routerLink]="['/chats', chat.id]" routerLinkActive="active" [attr.aria-label]="chat.otherDisplayName + (chat.unread ? ', непрочитанных: ' + chat.unread : '')">
+          <app-avatar [name]="chat.otherDisplayName" [size]="40" />
+          <span class="body">
+            <span class="title-line">
+              <span class="name">{{ chat.otherDisplayName }}</span>
+              @if (chat.blocked) {
+                <span class="flag">заблокирован</span>
+              }
+            </span>
+            <span class="preview">{{ preview(chat) }}</span>
+          </span>
+          @if (chat.unread > 0) {
+            <span class="badge" aria-hidden="true">{{ unreadLabel(chat.unread) }}</span>
+          }
+        </a>
+      </li>
+    }
+  </ul>
+  @if (hasMore()) {
+    <div class="more">
+      <button type="button" appButton variant="secondary" [busy]="loadingMore()" (click)="loadMore()">
+        {{ loadingMore() ? 'Загружаем…' : 'Загрузить ещё' }}
+      </button>
+    </div>
+  }
+}

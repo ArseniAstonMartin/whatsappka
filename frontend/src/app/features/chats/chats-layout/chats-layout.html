@@ -1,0 +1,8 @@
+<div class="chats" [class.has-chat]="hasChat()">
+  <section class="pane list-pane" aria-label="Список чатов">
+    <app-chat-list />
+  </section>
+  <section class="pane dialog-pane">
+    <router-outlet />
+  </section>
+</div>
