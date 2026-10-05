@@ -30,6 +30,8 @@ import { TextField } from '../../../shared/ui/text-field/text-field';
 import { MediaUpload, UploadedMedia } from '../../../shared/media/media-upload/media-upload';
 import { MediaView } from '../../../shared/media/media-view/media-view';
 import { MediaPurpose } from '../../../shared/media/purposes';
+import { openReport } from '../../../shared/report/report-button';
+import { Dialog } from '@angular/cdk/dialog';
 
 const EDIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -117,6 +119,7 @@ interface DeletedPayload {
 })
 export class ChatDialog {
   private readonly chats = inject(ChatService);
+  private readonly dialog = inject(Dialog);
   private readonly groupChats = inject(GroupChatService);
   private readonly profiles = inject(ProfileService);
   private readonly realtime = inject(RealtimeService);
@@ -295,6 +298,9 @@ export class ChatDialog {
     }
     if (this.canDeleteMessage(message)) {
       actions.push({ label: 'Удалить', danger: true, run: () => this.requestDelete(message) });
+    }
+    if (!this.isOwn(message) && !message.deleted) {
+      actions.push({ label: 'Пожаловаться', run: () => openReport(this.dialog, this.toasts, 'MESSAGE', message.id) });
     }
     return actions;
   }

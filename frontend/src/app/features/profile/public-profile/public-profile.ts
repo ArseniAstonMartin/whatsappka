@@ -5,6 +5,7 @@ import { PostService, PostSummaryPublic } from '../../../core/post.service';
 import { toProblem } from '../../../core/api-error';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
 import { AppButton } from '../../../shared/ui/button/app-button';
+import { ReportButton } from '../../../shared/report/report-button';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { StatePanel } from '../../../shared/state-panel/state-panel';
 import { ProfileHeader } from '../profile-header/profile-header';
@@ -18,7 +19,7 @@ import { Router, RouterLink } from '@angular/router';
  */
 @Component({
   selector: 'app-public-profile',
-  imports: [AppButton, Skeleton, StatePanel, ProfileHeader, PostList, RouterLink],
+  imports: [AppButton, Skeleton, StatePanel, ProfileHeader, PostList, RouterLink, ReportButton],
   templateUrl: './public-profile.html',
   styleUrl: './public-profile.scss',
 })

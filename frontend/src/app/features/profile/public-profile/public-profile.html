@@ -42,6 +42,7 @@
         <button type="button" appButton variant="secondary" [busy]="writeBusy()" [disabled]="writeBusy()" (click)="write()">
           Написать
         </button>
+        <app-report-button targetKind="USER" [targetId]="p.id" />
         <button type="button" appButton variant="ghost" [disabled]="followBusy()" (click)="block()">
           Заблокировать
         </button>

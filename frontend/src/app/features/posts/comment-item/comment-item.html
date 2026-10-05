@@ -48,6 +48,9 @@
         [viewerReaction]="node().comment.viewerReaction"
       />
       <button type="button" appButton variant="ghost" (click)="toggleReply()">Ответить</button>
+      @if (!isOwn()) {
+        <app-report-button targetKind="COMMENT" [targetId]="node().comment.id" />
+      }
       @if (isOwn()) {
         <button type="button" appButton variant="ghost" (click)="toggleEdit()">Редактировать</button>
         <button type="button" appButton variant="ghost" [busy]="removing()" [disabled]="removing()" (click)="remove()">

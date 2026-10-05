@@ -4,7 +4,7 @@ import { lastValueFrom } from 'rxjs';
 import { CursorPage } from './profile.service';
 import { ReactionType } from './reaction.service';
 
-export type PostStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED';
+export type PostStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED' | 'HIDDEN';
 
 export interface PostView {
   id: string;

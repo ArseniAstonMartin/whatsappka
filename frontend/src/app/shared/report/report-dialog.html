@@ -1,0 +1,33 @@
+<h2 id="report-title" class="title">Пожаловаться</h2>
+<p class="hint">Модераторы рассмотрят жалобу. Заявитель не виден автору материала. На один материал можно иметь одну открытую жалобу.</p>
+
+<form (submit)="$event.preventDefault(); submit()" novalidate>
+  <fieldset class="reasons">
+    <legend class="legend">Причина</legend>
+    @for (r of reasons; track r.value) {
+      <label class="reason">
+        <input type="radio" name="reason" [value]="r.value" [checked]="reason() === r.value" (change)="select(r.value)" />
+        <span>{{ r.label }}</span>
+      </label>
+    }
+  </fieldset>
+
+  <label class="label" for="report-description">Комментарий (необязательно)</label>
+  <textarea
+    id="report-description"
+    class="field"
+    rows="3"
+    [maxLength]="maxLength"
+    [value]="description()"
+    (input)="description.set($any($event.target).value)"
+  ></textarea>
+
+  @if (error(); as text) {
+    <p class="error" role="alert">{{ text }}</p>
+  }
+
+  <div class="actions">
+    <button type="button" appButton variant="ghost" (click)="cancel()">Отмена</button>
+    <button type="submit" appButton [busy]="busy()" [disabled]="busy()">Отправить жалобу</button>
+  </div>
+</form>

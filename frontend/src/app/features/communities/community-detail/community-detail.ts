@@ -20,6 +20,7 @@ import { MediaView } from '../../../shared/media/media-view/media-view';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { CommunityMembers } from '../community-members/community-members';
 import { PostList } from '../../../shared/post-list/post-list';
+import { ReportButton } from '../../../shared/report/report-button';
 
 const ROLE_LABEL: Record<string, string> = { OWNER: 'Владелец', ADMIN: 'Администратор', MEMBER: 'Участник' };
 
@@ -30,6 +31,7 @@ const ROLE_LABEL: Record<string, string> = { OWNER: 'Владелец', ADMIN: '
 @Component({
   selector: 'app-community-detail',
   imports: [
+    ReportButton,
     ReactiveFormsModule,
     AppButton,
     Card,

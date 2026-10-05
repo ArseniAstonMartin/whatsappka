@@ -65,6 +65,12 @@
     </div>
   }
 
+  @if (v.viewerRole !== 'OWNER') {
+    <div class="actions">
+      <app-report-button targetKind="GROUP" [targetId]="v.id" />
+    </div>
+  }
+
   @if (v.viewerRole === 'OWNER') {
     <div class="actions">
       <button type="button" appButton variant="secondary" [attr.aria-expanded]="editing()" (click)="toggleEdit()">

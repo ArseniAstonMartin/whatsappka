@@ -7,6 +7,8 @@ import { CommentService, CommentView } from '../../../core/comment.service';
 import { AuthService } from '../../../core/auth.service';
 import { toProblem } from '../../../core/api-error';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
+import { ReportButton } from '../../../shared/report/report-button';
+import { ReportService } from '../../../core/report.service';
 import { AppButton } from '../../../shared/ui/button/app-button';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { Card } from '../../../shared/ui/card/card';
@@ -37,6 +39,7 @@ import { CommentItem, CommentNode, buildCommentTree } from '../comment-item/comm
     MediaView,
     ReactionBar,
     CommentItem,
+    ReportButton,
   ],
   templateUrl: './post-detail.html',
   styleUrl: './post-detail.scss',
@@ -46,6 +49,9 @@ export class PostDetail implements OnInit {
   private readonly commentsApi = inject(CommentService);
   private readonly auth = inject(AuthService);
   private readonly toasts = inject(ToastService);
+  private readonly reports = inject(ReportService);
+  /** Причина скрытия видна только автору скрытой публикации; для остальных остаётся null. */
+  protected readonly hiddenReason = signal<string | null>(null);
 
   readonly id = input.required<string>();
 
@@ -88,7 +94,11 @@ export class PostDetail implements OnInit {
     this.notFound.set(false);
     this.error.set(null);
     try {
-      this.post.set(await this.posts.get(this.id()));
+      const loaded = await this.posts.get(this.id());
+      this.post.set(loaded);
+      if (loaded.status === 'HIDDEN' && this.auth.user()?.id === loaded.authorId) {
+        this.hiddenReason.set((await this.reports.hiddenPostReason(loaded.id)).reason);
+      }
       await this.loadComments();
     } catch (error) {
       const problem = toProblem(error);
