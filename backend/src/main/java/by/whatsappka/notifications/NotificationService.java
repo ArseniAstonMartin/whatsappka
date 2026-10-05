@@ -4,6 +4,7 @@ import by.whatsappka.platform.web.ApiException;
 import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,19 +26,22 @@ public class NotificationService {
 
     /**
      * Создаёт уведомление, если получатель не действие самого себя и не отключил этот тип.
-     * Возвращает true, только если уведомление создано: повтор того же события не даёт второго.
+     * Возвращает id только при фактической записи: повтор того же события (ключ eventKey) ничего не создаёт.
      */
     @Transactional
-    public boolean notify(UUID recipient, String eventKey, NotificationType type, UUID actor, UUID targetId) {
+    public Optional<UUID> notify(UUID recipient, String eventKey, NotificationType type, UUID actor,
+                                 NotificationType.TargetKind kind, UUID targetId) {
         if (eventKey == null || eventKey.isBlank()) {
             throw new IllegalArgumentException("event key is required");
         }
+        NotificationRules.requireValidTarget(recipient, type, actor, kind, targetId);
         if (NotificationRules.isSelf(recipient, actor) || !enabled(recipient, type)) {
-            return false;
+            return Optional.empty();
         }
-        String targetKind = type.targetKind() == null ? null : type.targetKind().name();
-        return jdbc.update(NotificationSql.INSERT_NOTIFICATION, UUID.randomUUID(), recipient, eventKey, type.name(),
-                actor, targetKind, targetId) == 1;
+        UUID id = UUID.randomUUID();
+        int inserted = jdbc.update(NotificationSql.INSERT_NOTIFICATION, id, recipient, eventKey, type.name(),
+                actor, kind == null ? null : kind.name(), targetId);
+        return inserted == 1 ? Optional.of(id) : Optional.empty();
     }
 
     @Transactional(readOnly = true)

@@ -1,24 +1,30 @@
 package by.whatsappka.notifications;
 
-/** Типы уведомлений. Для каждого задан вид объекта, на который ссылка; системные отключить нельзя. */
+import java.util.EnumSet;
+import java.util.Set;
+
+/** Типы уведомлений. Для каждого задано, на какие виды объектов может ссылаться; системные отключить нельзя. */
 public enum NotificationType {
-    FOLLOW(TargetKind.USER),
-    MESSAGE(TargetKind.CONVERSATION),
-    CHAT_INVITATION(TargetKind.CONVERSATION),
-    COMMUNITY_INVITATION(TargetKind.COMMUNITY),
-    JOIN_REQUEST(TargetKind.COMMUNITY),
-    SYSTEM(null);
+    FOLLOW(EnumSet.of(TargetKind.USER)),
+    MESSAGE(EnumSet.of(TargetKind.CONVERSATION)),
+    CHAT_INVITATION(EnumSet.of(TargetKind.CONVERSATION)),
+    COMMUNITY_INVITATION(EnumSet.of(TargetKind.COMMUNITY)),
+    JOIN_REQUEST(EnumSet.of(TargetKind.COMMUNITY)),
+    COMMENT(EnumSet.of(TargetKind.POST)),
+    REPLY(EnumSet.of(TargetKind.COMMENT)),
+    REACTION(EnumSet.of(TargetKind.POST, TargetKind.COMMENT)),
+    SYSTEM(EnumSet.noneOf(TargetKind.class));
 
-    public enum TargetKind { USER, CONVERSATION, COMMUNITY }
+    public enum TargetKind { USER, CONVERSATION, COMMUNITY, POST, COMMENT }
 
-    private final TargetKind targetKind;
+    private final Set<TargetKind> targets;
 
-    NotificationType(TargetKind targetKind) {
-        this.targetKind = targetKind;
+    NotificationType(Set<TargetKind> targets) {
+        this.targets = targets;
     }
 
-    public TargetKind targetKind() {
-        return targetKind;
+    public boolean allowsTarget(TargetKind kind) {
+        return kind != null && targets.contains(kind);
     }
 
     public boolean canDisable() {

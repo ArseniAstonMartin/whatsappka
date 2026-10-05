@@ -25,6 +25,24 @@ public final class NotificationRules {
         }
     }
 
+    /**
+     * Проверка цели до записи; повторяет ограничения схемы V25/V26. Нарушение — ошибка вызывающего кода.
+     * Системное не ссылается ни на что. Подписка — на самого получателя и требует актора. Комментарий, ответ
+     * и реакция требуют актора. Приглашения и заявки актора не требуют.
+     */
+    public static void requireValidTarget(UUID recipient, NotificationType type, UUID actor,
+                                          NotificationType.TargetKind kind, UUID targetId) {
+        boolean valid = switch (type) {
+            case SYSTEM -> kind == null && targetId == null && actor == null;
+            case FOLLOW -> type.allowsTarget(kind) && recipient.equals(targetId) && actor != null;
+            case COMMENT, REPLY, REACTION -> type.allowsTarget(kind) && targetId != null && actor != null;
+            default -> type.allowsTarget(kind) && targetId != null;
+        };
+        if (!valid) {
+            throw new IllegalArgumentException("invalid notification target for " + type + ": " + kind);
+        }
+    }
+
     /** Системные уведомления можно только оставить включёнными. */
     public static void requireCanSet(NotificationType type, boolean enabled) {
         if (!enabled && !type.canDisable()) {

@@ -41,6 +41,15 @@ final class NotificationSql {
                        WHEN 'CHAT_INVITATION' THEN EXISTS (SELECT 1 FROM conversation_invitations i
                                                            WHERE i.conversation_id = n.target_id AND i.invitee_id = n.recipient_id
                                                              AND i.status = 'PENDING')
+                       WHEN 'COMMENT' THEN EXISTS (SELECT 1 FROM posts p
+                                                   WHERE p.id = n.target_id AND p.deleted_at IS NULL)
+                       WHEN 'REPLY' THEN EXISTS (SELECT 1 FROM comments c JOIN posts p ON p.id = c.post_id
+                                                 WHERE c.id = n.target_id AND c.deleted_at IS NULL AND p.deleted_at IS NULL)
+                       WHEN 'REACTION' THEN CASE WHEN n.target_kind = 'POST'
+                           THEN EXISTS (SELECT 1 FROM posts p WHERE p.id = n.target_id AND p.deleted_at IS NULL)
+                           ELSE EXISTS (SELECT 1 FROM comments c JOIN posts p ON p.id = c.post_id
+                                        WHERE c.id = n.target_id AND c.deleted_at IS NULL AND p.deleted_at IS NULL)
+                       END
                        WHEN 'JOIN_REQUEST' THEN EXISTS (SELECT 1 FROM group_members g
                                                         WHERE g.group_id = n.target_id AND g.user_id = n.recipient_id
                                                           AND g.role = 'ADMIN')
@@ -63,6 +72,11 @@ final class NotificationSql {
               AND (n.created_at, n.id) < (?, ?)
             ORDER BY n.created_at DESC, n.id DESC
             LIMIT ?
+            """;
+
+    /** Автор поста для уведомления о комментарии; удалённый пост уведомления не порождает. */
+    static final String POST_AUTHOR = """
+            SELECT author_id FROM posts WHERE id = ? AND deleted_at IS NULL
             """;
 
     static final String UNREAD_COUNT = """
