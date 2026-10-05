@@ -1,0 +1,33 @@
+<h1 class="heading">{{ title() }}</h1>
+@if (loading()) {
+  <div class="stack" aria-busy="true">
+    <app-skeleton width="100%" height="56px" />
+    <app-skeleton width="100%" height="56px" />
+  </div>
+} @else if (notFound()) {
+  <app-state-panel kind="not-found" title="Пользователь не найден" message="Список недоступен." />
+} @else if (error()) {
+  <app-state-panel kind="error" title="Не удалось загрузить список" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="start()">Повторить</button>
+  </app-state-panel>
+} @else if (items().length === 0) {
+  <app-state-panel kind="empty" [title]="isFollowers() ? 'Подписчиков пока нет' : 'Подписок пока нет'" message="" />
+} @else {
+  <ul class="list">
+    @for (user of items(); track user.id) {
+      <li class="row">
+        <a class="link" [routerLink]="['/users', user.username]">
+          <span class="name">{{ user.displayName }}</span>
+          <span class="username">&#64;{{ user.username }}</span>
+        </a>
+      </li>
+    }
+  </ul>
+  @if (hasMore()) {
+    <div class="more">
+      <button type="button" appButton variant="secondary" [busy]="loadingMore()" [disabled]="loadingMore()" (click)="loadMore()">
+        {{ loadingMore() ? 'Загружаем…' : 'Загрузить ещё' }}
+      </button>
+    </div>
+  }
+}

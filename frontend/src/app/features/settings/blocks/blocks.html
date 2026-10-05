@@ -1,0 +1,45 @@
+<section class="section" aria-labelledby="blocks-title">
+  <h2 id="blocks-title" class="title">Заблокированные</h2>
+  <p class="hint">
+    Блокировка прекращает новые личные сообщения, приглашения и подписки между вами. Разблокировка не восстанавливает
+    подписки.
+  </p>
+  @if (loading()) {
+    <app-skeleton width="100%" height="56px" />
+  } @else if (error()) {
+    <app-state-panel kind="error" title="Не удалось загрузить список" [message]="error()!">
+      <button type="button" appButton variant="secondary" (click)="start()">Повторить</button>
+    </app-state-panel>
+  } @else if (items().length === 0) {
+    <app-state-panel kind="empty" title="Заблокированных нет" message="" />
+  } @else {
+    <ul class="list">
+      @for (user of items(); track user.id) {
+        <li class="row">
+          <span class="who">
+            <span class="name">{{ user.displayName }}</span>
+            <span class="username">&#64;{{ user.username }}</span>
+          </span>
+          <button
+            type="button"
+            appButton
+            variant="secondary"
+            [busy]="isPending(user.id)"
+            [disabled]="isPending(user.id)"
+            [attr.aria-label]="'Разблокировать ' + user.displayName"
+            (click)="unblock(user)"
+          >
+            Разблокировать
+          </button>
+        </li>
+      }
+    </ul>
+    @if (hasMore()) {
+      <div class="more">
+        <button type="button" appButton variant="secondary" [busy]="loadingMore()" [disabled]="loadingMore()" (click)="loadMore()">
+          Загрузить ещё
+        </button>
+      </div>
+    }
+  }
+</section>

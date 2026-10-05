@@ -40,7 +40,19 @@ export interface ProfilePatch {
   timezone?: string;
 }
 
-/** Запросы профиля. Списки связей и блокировки подключаются в отдельных задачах. */
+export interface UserSummary {
+  id: string;
+  username: string;
+  displayName: string;
+}
+
+export interface CursorPage<T> {
+  items: T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+/** Запросы профиля, связей и блокировок. */
 @Injectable({ providedIn: 'root' })
 export class ProfileService {
   private readonly http = inject(HttpClient);
@@ -74,5 +86,29 @@ export class ProfileService {
 
   detach(mediaId: string, linkType: 'PROFILE_AVATAR' | 'PROFILE_COVER', linkId: string): Promise<void> {
     return lastValueFrom(this.http.post(`/api/v1/media/${mediaId}/detach`, { linkType, linkId })).then(() => undefined);
+  }
+
+  followers(userId: string, cursor: string | null): Promise<CursorPage<UserSummary>> {
+    return lastValueFrom(this.http.get<CursorPage<UserSummary>>(`/api/v1/users/${userId}/followers`, { params: this.pageParams(cursor) }));
+  }
+
+  following(userId: string, cursor: string | null): Promise<CursorPage<UserSummary>> {
+    return lastValueFrom(this.http.get<CursorPage<UserSummary>>(`/api/v1/users/${userId}/following`, { params: this.pageParams(cursor) }));
+  }
+
+  block(userId: string): Promise<void> {
+    return lastValueFrom(this.http.put(`/api/v1/users/${userId}/block`, null)).then(() => undefined);
+  }
+
+  unblock(userId: string): Promise<void> {
+    return lastValueFrom(this.http.delete(`/api/v1/users/${userId}/block`)).then(() => undefined);
+  }
+
+  myBlocks(cursor: string | null): Promise<CursorPage<UserSummary>> {
+    return lastValueFrom(this.http.get<CursorPage<UserSummary>>('/api/v1/me/blocks', { params: this.pageParams(cursor) }));
+  }
+
+  private pageParams(cursor: string | null): Record<string, string> {
+    return cursor ? { cursor, limit: '20' } : { limit: '20' };
   }
 }

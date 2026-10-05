@@ -51,6 +51,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/profile/own-profile/own-profile').then((m) => m.OwnProfilePage),
       },
       {
+        path: 'users/:username/:list',
+        title: 'Связи',
+        loadComponent: () => import('./features/social/connections/connections').then((m) => m.Connections),
+      },
+      {
         path: 'users/:username',
         title: 'Профиль',
         loadComponent: () => import('./features/profile/public-profile/public-profile').then((m) => m.PublicProfilePage),
@@ -58,8 +63,7 @@ export const routes: Routes = [
       {
         path: 'settings',
         title: 'Настройки',
-        loadComponent: section,
-        data: { heading: 'Настройки', kind: 'empty', title: 'Настройки пока пусты', message: 'Здесь появятся сессии, блокировки и уведомления.' },
+        loadComponent: () => import('./features/settings/settings-page').then((m) => m.SettingsPage),
       },
       {
         path: 'manage',

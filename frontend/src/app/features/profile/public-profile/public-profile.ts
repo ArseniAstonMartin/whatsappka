@@ -6,6 +6,8 @@ import { AppButton } from '../../../shared/ui/button/app-button';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { StatePanel } from '../../../shared/state-panel/state-panel';
 import { ProfileHeader } from '../profile-header/profile-header';
+import { ConfirmService } from '../../../shared/ui/confirm-dialog/confirm.service';
+import { RouterLink } from '@angular/router';
 
 /**
  * Чужой профиль по имени пользователя. Действие подписки меняет состояние только после ответа сервера;
@@ -13,13 +15,14 @@ import { ProfileHeader } from '../profile-header/profile-header';
  */
 @Component({
   selector: 'app-public-profile',
-  imports: [AppButton, Skeleton, StatePanel, ProfileHeader],
+  imports: [AppButton, Skeleton, StatePanel, ProfileHeader, RouterLink],
   templateUrl: './public-profile.html',
   styleUrl: './public-profile.scss',
 })
 export class PublicProfilePage implements OnInit {
   private readonly profiles = inject(ProfileService);
   private readonly toasts = inject(ToastService);
+  private readonly confirm = inject(ConfirmService);
 
   readonly username = input.required<string>();
 
@@ -72,6 +75,39 @@ export class PublicProfilePage implements OnInit {
       await this.profiles.setFollowing(profile.id, next);
       this.relations.set(await this.profiles.relations(profile.id));
       this.toasts.show(next ? 'Вы подписались' : 'Подписка отменена', 'success');
+    } catch (error) {
+      this.toasts.show(toProblem(error).message, 'error');
+    } finally {
+      this.followBusy.set(false);
+    }
+  }
+
+  /**
+   * Блокировка после подтверждения. Ответ сервера до подтверждения не меняет экран; при успехе профиль скрывается,
+   * поэтому разблокировка выполняется в настройках.
+   */
+  protected async block(): Promise<void> {
+    const profile = this.profile();
+    if (!profile || this.followBusy()) {
+      return;
+    }
+    const confirmed = await this.confirm.confirm({
+      title: `Заблокировать ${profile.displayName}?`,
+      message:
+        'Личная переписка сохранится, но новые личные сообщения, приглашения и подписки станут недоступны. ' +
+        'Ваши подписки друг на друга будут удалены. Сообщения в общих групповых чатах остаются видны всем участникам. ' +
+        'Разблокировать можно в настройках.',
+      confirmLabel: 'Заблокировать',
+      danger: true,
+    });
+    if (!confirmed) {
+      return;
+    }
+    this.followBusy.set(true);
+    try {
+      await this.profiles.block(profile.id);
+      this.toasts.show('Пользователь заблокирован. Управлять блокировками можно в настройках.', 'success');
+      await this.load();
     } catch (error) {
       this.toasts.show(toProblem(error).message, 'error');
     } finally {

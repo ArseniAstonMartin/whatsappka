@@ -21,10 +21,10 @@
   />
 
   @if (relations(); as r) {
-    <div class="counts" aria-label="Связи">
-      <span>Подписчики: {{ r.followers }}</span>
-      <span>Подписки: {{ r.following }}</span>
-    </div>
+    <nav class="counts" aria-label="Связи">
+      <a [routerLink]="['/users', p.username, 'followers']">Подписчики: {{ r.followers }}</a>
+      <a [routerLink]="['/users', p.username, 'following']">Подписки: {{ r.following }}</a>
+    </nav>
     @if (r.self) {
       <p class="hint">Это ваш профиль. Редактирование — в разделе «Профиль».</p>
     } @else {
@@ -38,6 +38,9 @@
           (click)="toggleFollow()"
         >
           {{ followLabel() }}
+        </button>
+        <button type="button" appButton variant="ghost" [disabled]="followBusy()" (click)="block()">
+          Заблокировать
         </button>
       </div>
     }
