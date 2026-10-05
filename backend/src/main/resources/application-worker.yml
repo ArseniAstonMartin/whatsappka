@@ -11,3 +11,6 @@ whatsappka:
     worker-enabled: true
     concurrency: ${JOB_CONCURRENCY:2}
     lease: ${JOB_LEASE:PT5M}
+  outbox:
+    relay-enabled: true
+    batch-size: ${OUTBOX_BATCH_SIZE:20}
