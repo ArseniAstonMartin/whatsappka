@@ -44,7 +44,7 @@ spring:
 
 whatsappka:
   media:
-    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    endpoint: ${MINIO_ENDPOINT:http://127.0.0.1:9000}
     region: ${MINIO_REGION:us-east-1}
     bucket: ${MINIO_BUCKET:whatsappka-media}
     access-key: ${MINIO_ACCESS_KEY:}
