@@ -1,0 +1,16 @@
+<main class="page">
+  <h1 class="heading">Подтверждение почты</h1>
+  @switch (state()) {
+    @case ('pending') {
+      <p class="lead">Проверяем ссылку…</p>
+    }
+    @case ('confirmed') {
+      <p class="form-ok" role="status">Адрес почты подтверждён.</p>
+      <p class="switch"><a routerLink="/feed">Перейти в ленту</a></p>
+    }
+    @case ('invalid') {
+      <p class="form-error" role="alert">{{ message() }}</p>
+      <p class="switch"><a routerLink="/login">Войти и запросить новое письмо</a></p>
+    }
+  }
+</main>

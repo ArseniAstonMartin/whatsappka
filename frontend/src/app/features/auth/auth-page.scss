@@ -16,6 +16,11 @@
   line-height: 1.2;
 }
 
+.lead {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
 .form {
   display: grid;
   gap: var(--space-4);
@@ -28,6 +33,32 @@
   background: var(--color-surface-muted);
   border-left: 4px solid var(--color-danger);
   color: var(--color-text);
+}
+
+.form-ok {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  border-left: 4px solid var(--color-success, var(--color-primary));
+  color: var(--color-text);
+}
+
+.divider {
+  margin: 0;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.provider {
+  display: block;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-border, var(--color-text-muted));
+  color: var(--color-text);
+  text-align: center;
+  text-decoration: none;
+  font-weight: 600;
 }
 
 .switch {

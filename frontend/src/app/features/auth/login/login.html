@@ -1,5 +1,12 @@
 <main class="page">
   <h1 class="heading">Вход</h1>
+  @if (googleEnabled()) {
+    <a class="provider" [href]="googleStart">Войти через Google</a>
+    <p class="divider">или по почте и паролю</p>
+  }
+  @if (googleError()) {
+    <p class="form-error" role="alert">{{ googleError() }}</p>
+  }
   <form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <app-text-field
       formControlName="email"
@@ -22,5 +29,6 @@
       {{ submitting() ? 'Входим…' : 'Войти' }}
     </button>
   </form>
+  <p class="switch"><a routerLink="/forgot-password">Забыли пароль?</a></p>
   <p class="switch">Нет аккаунта? <a routerLink="/register">Зарегистрироваться</a></p>
 </main>

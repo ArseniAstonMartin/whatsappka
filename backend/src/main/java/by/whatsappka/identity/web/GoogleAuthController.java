@@ -93,10 +93,10 @@ public class GoogleAuthController {
                     .build();
         }
         if (outcome instanceof GoogleSignInService.Linked) {
-            return response.location(appUri("/settings", "google=linked")).build();
+            return response.location(appUri("/settings/security", "google=linked")).build();
         }
         GoogleSignInService.Failed failed = (GoogleSignInService.Failed) outcome;
-        String path = failed.linkFlow() ? "/settings" : "/login";
+        String path = failed.linkFlow() ? "/settings/security" : "/login";
         String query = "error=" + URLEncoder.encode(failed.code(), StandardCharsets.UTF_8);
         return response.location(appUri(path, query)).build();
     }

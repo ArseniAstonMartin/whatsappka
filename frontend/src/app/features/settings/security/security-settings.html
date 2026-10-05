@@ -1,0 +1,91 @@
+<main class="page">
+  <h1 class="heading">Безопасность</h1>
+  <p class="lead">Устройства, пароль и способы входа. <a routerLink="/settings">К настройкам</a></p>
+
+  <section class="section" aria-labelledby="sessions-title">
+    <h2 id="sessions-title" class="title">Устройства и сеансы</h2>
+    <p class="hint">Здесь видны входы в аккаунт. Завершение сеанса выключает вход с этого устройства.</p>
+    @if (sessionsLoading()) {
+      <app-skeleton width="100%" height="56px" />
+    } @else if (sessionsError()) {
+      <app-state-panel kind="error" title="Не удалось загрузить сеансы" [message]="sessionsError()!">
+        <button type="button" appButton variant="secondary" (click)="loadSessions()">Повторить</button>
+      </app-state-panel>
+    } @else {
+      <ul class="list">
+        @for (session of sessions(); track session.id) {
+          <li class="row">
+            <span class="who">
+              <span class="name">
+                {{ session.deviceLabel }}
+                @if (session.current) {
+                  <span class="badge">Это устройство</span>
+                }
+              </span>
+              <span class="meta">Вход {{ session.createdAt | date: 'd MMM yyyy, HH:mm' }} · активен {{ session.lastUsedAt | date: 'd MMM, HH:mm' }}</span>
+            </span>
+            <button
+              type="button"
+              appButton
+              variant="secondary"
+              [busy]="isPending(session.id)"
+              [disabled]="isPending(session.id)"
+              [attr.aria-label]="(session.current ? 'Выйти на этом устройстве' : 'Завершить сеанс') + ': ' + session.deviceLabel"
+              (click)="revoke(session)"
+            >
+              {{ session.current ? 'Выйти' : 'Завершить' }}
+            </button>
+          </li>
+        }
+      </ul>
+      @if (sessions().length > 1) {
+        <div class="actions">
+          <button type="button" appButton variant="secondary" (click)="logoutAll()">Завершить все сеансы</button>
+        </div>
+      }
+    }
+  </section>
+
+  <section class="section" aria-labelledby="password-title">
+    <h2 id="password-title" class="title">Пароль</h2>
+    <p class="hint">
+      Новый пароль задаётся по ссылке из письма. После смены все сеансы завершаются, и вход нужно повторить.
+    </p>
+    <div class="actions">
+      <button
+        type="button"
+        appButton
+        variant="secondary"
+        [busy]="resetSending()"
+        [disabled]="resetSending() || !email()"
+        (click)="sendPasswordReset()"
+      >
+        Отправить ссылку на {{ email() ?? 'почту' }}
+      </button>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="google-title">
+    <h2 id="google-title" class="title">Вход через Google</h2>
+    @if (googleNotice()) {
+      <p class="notice" role="status">{{ googleNotice() }}</p>
+    }
+    @if (googleError()) {
+      <p class="notice notice-error" role="alert">{{ googleError() }}</p>
+    }
+    @if (googleEnabled() === null) {
+      <app-skeleton width="100%" height="40px" />
+    } @else if (!googleEnabled()) {
+      <p class="hint">Вход через Google сейчас не настроен на сервере. Пароль и почта остаются основным способом входа.</p>
+    } @else {
+      <p class="hint">
+        Привязка выполняется только по вашему нажатию. Совпадение почты само по себе ничего не привязывает.
+      </p>
+      <div class="actions">
+        <button type="button" appButton variant="secondary" [busy]="googleBusy()" [disabled]="googleBusy()" (click)="linkGoogle()">
+          Привязать Google
+        </button>
+      </div>
+    }
+  </section>
+</main>

@@ -19,3 +19,19 @@ export function safeNext(raw: string | null): string {
   }
   return raw;
 }
+
+/** Текст ошибки входа через Google из адреса возврата. Коды Google не показываются как есть. */
+export function googleErrorText(code: string | null): string | null {
+  if (!code) {
+    return null;
+  }
+  return googleErrors[code] ?? 'Вход через Google не выполнен. Попробуйте ещё раз или войдите по почте и паролю.';
+}
+
+const googleErrors: Record<string, string> = {
+  google_not_configured: 'Вход через Google сейчас не настроен на сервере. Войдите по почте и паролю.',
+  google_unavailable: 'Google сейчас недоступен. Попробуйте позже или войдите по почте и паролю.',
+  google_cancelled: 'Вход через Google отменён.',
+  google_email_unverified: 'Google не подтвердил адрес этой почты.',
+  email_in_use: 'Аккаунт с этим email уже есть. Войдите по почте и паролю и привяжите Google в настройках безопасности.',
+};

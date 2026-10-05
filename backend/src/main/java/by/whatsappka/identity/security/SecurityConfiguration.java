@@ -60,6 +60,7 @@ public class SecurityConfiguration {
                                 "/api/v1/auth/password-reset/confirm",
                                 "/api/v1/auth/email-confirmation/confirm").permitAll()
                         .requestMatchers(HttpMethod.GET,
+                                "/api/v1/auth/providers",
                                 "/api/v1/auth/google/start",
                                 "/api/v1/auth/google/callback").permitAll()
                         // Рукопожатие WebSocket; авторизация кадров CONNECT выполняется в канале STOMP.

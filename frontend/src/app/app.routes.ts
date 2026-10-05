@@ -16,6 +16,21 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register/register').then((m) => m.Register),
   },
   {
+    path: 'forgot-password',
+    title: 'Восстановление пароля',
+    loadComponent: () => import('./features/auth/forgot-password/forgot-password').then((m) => m.ForgotPassword),
+  },
+  {
+    path: 'reset-password',
+    title: 'Новый пароль',
+    loadComponent: () => import('./features/auth/reset-password/reset-password').then((m) => m.ResetPassword),
+  },
+  {
+    path: 'confirm-email',
+    title: 'Подтверждение почты',
+    loadComponent: () => import('./features/auth/confirm-email/confirm-email').then((m) => m.ConfirmEmail),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () => import('./shell/app-shell').then((m) => m.AppShell),
@@ -124,6 +139,11 @@ export const routes: Routes = [
         path: 'users/:username',
         title: 'Профиль',
         loadComponent: () => import('./features/profile/public-profile/public-profile').then((m) => m.PublicProfilePage),
+      },
+      {
+        path: 'settings/security',
+        title: 'Безопасность',
+        loadComponent: () => import('./features/settings/security/security-settings').then((m) => m.SecuritySettings),
       },
       {
         path: 'settings',
