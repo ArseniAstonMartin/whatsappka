@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { CursorPage } from './profile.service';
+import { ReactionType } from './reaction.service';
 
 export type PostStatus = 'DRAFT' | 'SCHEDULED' | 'PUBLISHED';
 
@@ -21,6 +22,8 @@ export interface PostView {
   updatedAt: string;
   publishedAt: string | null;
   scheduleFailureReason: string | null;
+  reactionCounts: Partial<Record<ReactionType, number>>;
+  viewerReaction: ReactionType | null;
 }
 
 export interface PostSummary {

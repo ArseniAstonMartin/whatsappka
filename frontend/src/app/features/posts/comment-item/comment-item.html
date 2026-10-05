@@ -41,6 +41,12 @@
     }
 
     <div class="actions">
+      <app-reaction-bar
+        target="comment"
+        [targetId]="node().comment.id"
+        [counts]="node().comment.reactionCounts"
+        [viewerReaction]="node().comment.viewerReaction"
+      />
       <button type="button" appButton variant="ghost" (click)="toggleReply()">Ответить</button>
       @if (isOwn()) {
         <button type="button" appButton variant="ghost" (click)="toggleEdit()">Редактировать</button>

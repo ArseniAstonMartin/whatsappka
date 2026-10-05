@@ -11,6 +11,7 @@ import { AppButton } from '../../../shared/ui/button/app-button';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { MediaView } from '../../../shared/media/media-view/media-view';
 import { TextField } from '../../../shared/ui/text-field/text-field';
+import { ReactionBar } from '../../../shared/reaction-bar/reaction-bar';
 
 export interface CommentNode {
   comment: CommentView;
@@ -50,7 +51,7 @@ export function buildCommentTree(flat: CommentView[]): CommentNode[] {
  */
 @Component({
   selector: 'app-comment-item',
-  imports: [ReactiveFormsModule, DatePipe, RouterLink, AppButton, Avatar, MediaView, TextField, CommentItem],
+  imports: [ReactiveFormsModule, DatePipe, RouterLink, AppButton, Avatar, MediaView, TextField, ReactionBar, CommentItem],
   templateUrl: './comment-item.html',
   styleUrl: './comment-item.scss',
 })

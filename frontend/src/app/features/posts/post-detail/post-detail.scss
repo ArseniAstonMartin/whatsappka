@@ -84,6 +84,10 @@
   font-size: var(--font-size-small);
 }
 
+.reactions {
+  margin-bottom: var(--space-3);
+}
+
 .actions {
   display: flex;
   gap: var(--space-3);

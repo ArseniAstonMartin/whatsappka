@@ -14,15 +14,30 @@ import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { StatePanel } from '../../../shared/state-panel/state-panel';
 import { TextField } from '../../../shared/ui/text-field/text-field';
 import { MediaView } from '../../../shared/media/media-view/media-view';
+import { ReactionBar } from '../../../shared/reaction-bar/reaction-bar';
 import { CommentItem, CommentNode, buildCommentTree } from '../comment-item/comment-item';
 
 /**
- * Карточка публикации с ветками комментариев (TASK-049). Комментарии грузятся постранично по
- * корневым записям; ответы второго/третьего уровня сервер отдаёт в той же странице (TASK-048).
+ * Карточка публикации с ветками комментариев (TASK-049) и реакциями (TASK-050). Комментарии
+ * грузятся постранично по корневым записям; ответы второго/третьего уровня сервер отдаёт в той же
+ * странице (TASK-048).
  */
 @Component({
   selector: 'app-post-detail',
-  imports: [ReactiveFormsModule, DatePipe, RouterLink, AppButton, Avatar, Card, Skeleton, StatePanel, TextField, MediaView, CommentItem],
+  imports: [
+    ReactiveFormsModule,
+    DatePipe,
+    RouterLink,
+    AppButton,
+    Avatar,
+    Card,
+    Skeleton,
+    StatePanel,
+    TextField,
+    MediaView,
+    ReactionBar,
+    CommentItem,
+  ],
   templateUrl: './post-detail.html',
   styleUrl: './post-detail.scss',
 })

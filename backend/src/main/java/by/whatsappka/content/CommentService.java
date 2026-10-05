@@ -38,16 +38,18 @@ public class CommentService {
     private final CommunityMembershipService communities;
     private final SocialRelations relations;
     private final OutboxWriter outbox;
+    private final ReactionService reactions;
     private final Clock clock;
 
     public CommentService(
             JdbcTemplate jdbc, CommunityMembershipService communities, SocialRelations relations,
-            OutboxWriter outbox, Clock clock
+            OutboxWriter outbox, ReactionService reactions, Clock clock
     ) {
         this.jdbc = jdbc;
         this.communities = communities;
         this.relations = relations;
         this.outbox = outbox;
+        this.reactions = reactions;
         this.clock = clock;
     }
 
@@ -55,7 +57,8 @@ public class CommentService {
             UUID id, UUID postId, UUID parentId, UUID replyToUserId,
             UUID authorId, String authorUsername, String authorDisplayName, UUID authorAvatarMediaId,
             String body, boolean deleted, boolean edited, int depth,
-            Instant createdAt, Instant updatedAt, long version
+            Instant createdAt, Instant updatedAt, long version,
+            Map<String, Long> reactionCounts, String viewerReaction
     ) {
     }
 
@@ -141,14 +144,18 @@ public class CommentService {
             List<Row> level2 = rowsByParentIds(rootIds);
             List<UUID> level2Ids = level2.stream().map(Row::id).toList();
             List<Row> level3 = level2Ids.isEmpty() ? List.of() : rowsByParentIds(level2Ids);
+            List<UUID> allIds = new ArrayList<>(rootIds);
+            allIds.addAll(level2Ids);
+            allIds.addAll(level3.stream().map(Row::id).toList());
+            Map<UUID, ReactionService.ReactionSummary> reactionsByComment = reactions.commentReactions(allIds, viewerId);
             for (Row row : pageRoots) {
-                items.add(toView(row));
+                items.add(toView(row, reactionsByComment));
             }
             for (Row row : level2) {
-                items.add(toView(row));
+                items.add(toView(row, reactionsByComment));
             }
             for (Row row : level3) {
-                items.add(toView(row));
+                items.add(toView(row, reactionsByComment));
             }
         }
         String next = more
@@ -204,14 +211,18 @@ public class CommentService {
         return jdbc.query(sql, ROW_MAPPER, parentIds.toArray());
     }
 
-    private CommentView toView(Row row) {
+    private CommentView toView(Row row, Map<UUID, ReactionService.ReactionSummary> reactionsByComment) {
         boolean deleted = row.deletedAt() != null;
         boolean edited = !deleted && row.updatedAt().isAfter(row.createdAt());
+        ReactionService.ReactionSummary summary = deleted
+                ? new ReactionService.ReactionSummary(Map.of(), null)
+                : reactionsByComment.getOrDefault(row.id(), new ReactionService.ReactionSummary(Map.of(), null));
         return new CommentView(
                 row.id(), row.postId(), row.parentId(), row.replyToUserId(),
                 row.authorId(), row.authorUsername(), row.authorDisplayName(), row.authorAvatarMediaId(),
                 deleted ? null : row.body(), deleted, edited, row.depth(),
-                row.createdAt(), row.updatedAt(), row.version());
+                row.createdAt(), row.updatedAt(), row.version(),
+                summary.counts(), summary.viewerReaction());
     }
 
     private void diagnoseUpdateFailure(UUID commentId, UUID authorId) {

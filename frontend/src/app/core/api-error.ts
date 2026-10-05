@@ -54,6 +54,7 @@ const MESSAGES: Record<string, string> = {
   bad_request: 'Проверьте запрос и попробуйте снова',
   comment_deleted: 'Комментарий удалён',
   already_deleted: 'Комментарий уже удалён',
+  invalid_reaction_type: 'Неизвестный тип реакции',
 };
 
 export function toProblem(error: unknown): ApiProblem {

@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { CursorPage } from './profile.service';
+import { ReactionType } from './reaction.service';
 
 export interface CommentView {
   id: string;
@@ -19,6 +20,8 @@ export interface CommentView {
   createdAt: string;
   updatedAt: string;
   version: number;
+  reactionCounts: Partial<Record<ReactionType, number>>;
+  viewerReaction: ReactionType | null;
 }
 
 export interface CommentRef {

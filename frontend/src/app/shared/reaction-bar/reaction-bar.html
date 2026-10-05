@@ -1,0 +1,41 @@
+<div class="reaction-bar">
+  <button
+    type="button"
+    class="summary"
+    [class.active]="state().viewerReaction !== null"
+    [disabled]="busy()"
+    [attr.aria-expanded]="pickerOpen()"
+    (click)="togglePicker()"
+  >
+    <span class="emoji">{{ mine()?.emoji ?? '👍' }}</span>
+    @if (total() > 0) {
+      <span class="count">{{ total() }}</span>
+    } @else {
+      <span class="label">Реакция</span>
+    }
+  </button>
+
+  @if (pickerOpen()) {
+    <ul class="picker" role="menu">
+      @for (option of options; track option.type) {
+        <li>
+          <button
+            type="button"
+            class="option"
+            role="menuitemradio"
+            [class.active]="state().viewerReaction === option.type"
+            [attr.aria-checked]="state().viewerReaction === option.type"
+            [title]="option.label"
+            [disabled]="busy()"
+            (click)="pick(option.type)"
+          >
+            <span class="emoji">{{ option.emoji }}</span>
+            @if (countFor(option.type) > 0) {
+              <span class="count">{{ countFor(option.type) }}</span>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</div>

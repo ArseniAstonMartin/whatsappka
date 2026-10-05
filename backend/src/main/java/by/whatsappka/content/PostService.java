@@ -36,16 +36,18 @@ public class PostService {
     private final CommunityMembershipService communities;
     private final SocialRelations relations;
     private final OutboxWriter outbox;
+    private final ReactionService reactions;
     private final Clock clock;
 
     public PostService(
             JdbcTemplate jdbc, CommunityMembershipService communities, SocialRelations relations,
-            OutboxWriter outbox, Clock clock
+            OutboxWriter outbox, ReactionService reactions, Clock clock
     ) {
         this.jdbc = jdbc;
         this.communities = communities;
         this.relations = relations;
         this.outbox = outbox;
+        this.reactions = reactions;
         this.clock = clock;
     }
 
@@ -62,7 +64,8 @@ public class PostService {
     public record PostView(
             UUID id, UUID authorId, String authorUsername, String authorDisplayName, UUID authorAvatarMediaId,
             String body, String status, UUID groupId, List<UUID> mediaIds, List<String> hashtags,
-            long version, Instant createdAt, Instant updatedAt, Instant publishedAt, String scheduleFailureReason
+            long version, Instant createdAt, Instant updatedAt, Instant publishedAt, String scheduleFailureReason,
+            Map<String, Long> reactionCounts, String viewerReaction
     ) {
     }
 
@@ -184,9 +187,11 @@ public class PostService {
                 "SELECT h.normalized_name FROM post_hashtags ph JOIN hashtags h ON h.id = ph.hashtag_id "
                         + "WHERE ph.post_id = ? ORDER BY h.normalized_name",
                 (rs, n) -> rs.getString("normalized_name"), postId);
+        ReactionService.ReactionSummary reactionSummary = reactions.postReactions(postId, viewerId);
         return new PostView(row.id(), row.authorId(), row.authorUsername(), row.authorDisplayName(), row.authorAvatarMediaId(),
                 row.body(), row.status(), row.groupId(), mediaIds, hashtags,
-                row.version(), row.createdAt(), row.updatedAt(), row.publishedAt(), own ? row.scheduleFailureReason() : null);
+                row.version(), row.createdAt(), row.updatedAt(), row.publishedAt(), own ? row.scheduleFailureReason() : null,
+                reactionSummary.counts(), reactionSummary.viewerReaction());
     }
 
     private void requirePubliclyVisible(FullRow row, UUID viewerId) {
