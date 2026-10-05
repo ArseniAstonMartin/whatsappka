@@ -1,0 +1,19 @@
+<button type="button" appButton variant="secondary" aria-haspopup="menu" [cdkMenuTriggerFor]="menu">
+  {{ label() }}
+</button>
+<ng-template #menu>
+  <div class="menu" cdkMenu>
+    @for (item of items(); track $index) {
+      <button
+        type="button"
+        class="item"
+        cdkMenuItem
+        [class.danger]="item.danger"
+        [disabled]="item.disabled ?? false"
+        (cdkMenuItemTriggered)="selected.emit($index)"
+      >
+        {{ item.label }}
+      </button>
+    }
+  </div>
+</ng-template>

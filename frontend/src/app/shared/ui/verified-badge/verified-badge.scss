@@ -1,0 +1,14 @@
+:host {
+  display: inline-block;
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+svg {
+  display: block;
+  fill: currentColor;
+}
+
+.center {
+  fill: var(--color-surface);
+}

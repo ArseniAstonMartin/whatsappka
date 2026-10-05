@@ -1,0 +1,18 @@
+<label class="label" [attr.for]="inputId">{{ label() }}</label>
+<input
+  class="input"
+  [id]="inputId"
+  [type]="type()"
+  [attr.autocomplete]="autocomplete()"
+  [value]="value()"
+  [disabled]="disabled()"
+  [attr.aria-invalid]="errorText() ? 'true' : null"
+  [attr.aria-describedby]="describedBy()"
+  (input)="onInput($event)"
+  (blur)="onBlur()"
+/>
+@if (errorText()) {
+  <p class="error" [id]="inputId + '-error'" role="alert">{{ errorText() }}</p>
+} @else if (hint()) {
+  <p class="hint" [id]="inputId + '-hint'">{{ hint() }}</p>
+}

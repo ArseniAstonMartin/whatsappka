@@ -1,0 +1,22 @@
+:host {
+  display: block;
+  background: var(--color-surface-muted);
+  animation: skeleton-fade 1.6s ease-in-out infinite;
+}
+
+@keyframes skeleton-fade {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Без непрерывного движения, если пользователь его отключил. */
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    animation: none;
+  }
+}

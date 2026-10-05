@@ -1,0 +1,10 @@
+<div class="host">
+  @for (toast of toasts(); track toast.id) {
+    <div [class]="'toast toast-' + toast.kind" [attr.role]="toast.kind === 'error' ? 'alert' : 'status'">
+      <p class="text">{{ toast.message }}</p>
+      <button type="button" class="close" aria-label="Закрыть уведомление" (click)="dismiss(toast.id)">
+        <app-icon name="close" [size]="20" />
+      </button>
+    </div>
+  }
+</div>

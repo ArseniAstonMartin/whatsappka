@@ -1,0 +1,12 @@
+<section class="dialog" role="alertdialog" [attr.aria-labelledby]="'confirm-title'" [attr.aria-describedby]="'confirm-message'">
+  <h2 id="confirm-title" class="title">{{ options.title }}</h2>
+  <p id="confirm-message" class="message">{{ options.message }}</p>
+  <div class="actions">
+    <button type="button" appButton variant="secondary" cdkFocusInitial (click)="cancel()">
+      {{ options.cancelLabel ?? 'Отмена' }}
+    </button>
+    <button type="button" appButton [variant]="options.danger ? 'danger' : 'primary'" (click)="confirm()">
+      {{ options.confirmLabel ?? 'Подтвердить' }}
+    </button>
+  </div>
+</section>
