@@ -21,6 +21,10 @@
         }
       </ul>
     </nav>
+    <button type="button" appButton variant="ghost" class="logout" (click)="logout()">
+      <app-icon name="logout" [size]="24" />
+      <span>Выйти</span>
+    </button>
   </aside>
 
   <div class="content">
@@ -37,6 +41,9 @@
           }
         </ul>
       </nav>
+      <button type="button" appButton variant="ghost" class="logout-mobile" aria-label="Выйти из аккаунта" (click)="logout()">
+        <app-icon name="logout" [size]="24" />
+      </button>
     </header>
 
     @if (connection.status() !== 'online') {

@@ -1,0 +1,40 @@
+.page {
+  display: grid;
+  gap: var(--space-5);
+  width: min(420px, calc(100vw - 2 * var(--space-4)));
+  margin: var(--space-7) auto;
+  padding: var(--space-5);
+  box-sizing: border-box;
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-h1);
+  line-height: 1.2;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.form-error {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  border-left: 4px solid var(--color-danger);
+  color: var(--color-text);
+}
+
+.switch {
+  margin: 0;
+  color: var(--color-text-muted);
+
+  a {
+    color: var(--color-primary);
+  }
+}

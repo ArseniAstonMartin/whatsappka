@@ -1,11 +1,23 @@
 import { Routes } from '@angular/router';
 import { requireRoles } from './core/require-roles';
+import { authGuard } from './core/auth.guard';
 
 const section = () => import('./shared/section-page/section-page').then((m) => m.SectionPage);
 
 export const routes: Routes = [
   {
+    path: 'login',
+    title: 'Вход',
+    loadComponent: () => import('./features/auth/login/login').then((m) => m.Login),
+  },
+  {
+    path: 'register',
+    title: 'Регистрация',
+    loadComponent: () => import('./features/auth/register/register').then((m) => m.Register),
+  },
+  {
     path: '',
+    canActivate: [authGuard],
     loadComponent: () => import('./shell/app-shell').then((m) => m.AppShell),
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'feed' },

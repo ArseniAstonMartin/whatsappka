@@ -1,0 +1,34 @@
+<main class="page">
+  <h1 class="heading">Регистрация</h1>
+  <form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <app-text-field
+      formControlName="email"
+      label="Email"
+      type="email"
+      autocomplete="email"
+      [errorText]="errorFor('email')"
+    />
+    <app-text-field
+      formControlName="username"
+      label="Имя пользователя"
+      autocomplete="username"
+      hint="От 3 до 30 латинских букв, цифр и подчёркиваний"
+      [errorText]="errorFor('username')"
+    />
+    <app-text-field
+      formControlName="password"
+      label="Пароль"
+      type="password"
+      autocomplete="new-password"
+      hint="От 10 до 72 символов"
+      [errorText]="errorFor('password')"
+    />
+    @if (formMessage()) {
+      <p class="form-error" role="alert">{{ formMessage() }}</p>
+    }
+    <button type="submit" appButton [busy]="submitting()" [disabled]="submitting()">
+      {{ submitting() ? 'Создаём аккаунт…' : 'Зарегистрироваться' }}
+    </button>
+  </form>
+  <p class="switch">Уже есть аккаунт? <a routerLink="/login">Войти</a></p>
+</main>

@@ -6,6 +6,9 @@ export function controlErrorText(control: AbstractControl | null): string | null
     return null;
   }
   const errors = control.errors;
+  if (typeof errors['server'] === 'string') {
+    return errors['server'];
+  }
   if (errors['required']) {
     return 'Обязательное поле';
   }

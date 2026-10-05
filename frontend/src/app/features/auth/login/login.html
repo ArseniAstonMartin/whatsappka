@@ -1,0 +1,26 @@
+<main class="page">
+  <h1 class="heading">Вход</h1>
+  <form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+    <app-text-field
+      formControlName="email"
+      label="Email"
+      type="email"
+      autocomplete="email"
+      [errorText]="errorFor('email')"
+    />
+    <app-text-field
+      formControlName="password"
+      label="Пароль"
+      type="password"
+      autocomplete="current-password"
+      [errorText]="errorFor('password')"
+    />
+    @if (formMessage()) {
+      <p class="form-error" role="alert">{{ formMessage() }}</p>
+    }
+    <button type="submit" appButton [busy]="submitting()" [disabled]="submitting()">
+      {{ submitting() ? 'Входим…' : 'Войти' }}
+    </button>
+  </form>
+  <p class="switch">Нет аккаунта? <a routerLink="/register">Зарегистрироваться</a></p>
+</main>
