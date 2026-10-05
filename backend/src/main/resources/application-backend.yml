@@ -19,6 +19,7 @@ whatsappka:
     jwt-secret: ${JWT_SECRET:}
     refresh-cookie-secure: ${REFRESH_COOKIE_SECURE:true}
     bcrypt-strength: ${BCRYPT_STRENGTH:10}
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:4200,http://localhost:8080}
 
 springdoc:
   api-docs:

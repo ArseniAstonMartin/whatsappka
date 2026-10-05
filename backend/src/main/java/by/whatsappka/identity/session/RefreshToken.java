@@ -42,4 +42,25 @@ public class RefreshToken {
         this.expiresAt = expiresAt;
         this.createdAt = now;
     }
+
+    public UUID id() {
+        return id;
+    }
+
+    public UUID sessionId() {
+        return sessionId;
+    }
+
+    public boolean isUsed() {
+        return usedAt != null;
+    }
+
+    public boolean isValidAt(Instant now) {
+        return usedAt == null && now.isBefore(expiresAt);
+    }
+
+    public void markUsed(Instant now, UUID replacement) {
+        this.usedAt = now;
+        this.replacedById = replacement;
+    }
 }

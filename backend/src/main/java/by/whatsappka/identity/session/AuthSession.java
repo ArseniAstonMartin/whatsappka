@@ -48,7 +48,37 @@ public class AuthSession {
         return id;
     }
 
+    public UUID userId() {
+        return userId;
+    }
+
     public Instant absoluteExpiresAt() {
         return absoluteExpiresAt;
+    }
+
+    public String deviceLabel() {
+        return deviceLabel;
+    }
+
+    public Instant createdAt() {
+        return createdAt;
+    }
+
+    public Instant lastUsedAt() {
+        return lastUsedAt;
+    }
+
+    public boolean isActiveAt(Instant now) {
+        return revokedAt == null && now.isBefore(absoluteExpiresAt);
+    }
+
+    public void revoke(Instant now) {
+        if (revokedAt == null) {
+            revokedAt = now;
+        }
+    }
+
+    public void touch(Instant now) {
+        lastUsedAt = now;
     }
 }

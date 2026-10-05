@@ -25,12 +25,21 @@ public class RefreshCookies {
     }
 
     public ResponseCookie issue(String refreshToken, Instant expiresAt) {
-        return ResponseCookie.from(NAME, refreshToken)
+        return base(refreshToken)
+                .maxAge(Duration.between(clock.instant(), expiresAt))
+                .build();
+    }
+
+    /** Очистка cookie: тот же путь и атрибуты, Max-Age=0. */
+    public ResponseCookie clear() {
+        return base("").maxAge(Duration.ZERO).build();
+    }
+
+    private ResponseCookie.ResponseCookieBuilder base(String value) {
+        return ResponseCookie.from(NAME, value)
                 .httpOnly(true)
                 .secure(secure)
                 .sameSite("Lax")
-                .path(PATH)
-                .maxAge(Duration.between(clock.instant(), expiresAt))
-                .build();
+                .path(PATH);
     }
 }
