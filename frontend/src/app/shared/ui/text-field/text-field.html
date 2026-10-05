@@ -1,16 +1,32 @@
 <label class="label" [attr.for]="inputId">{{ label() }}</label>
-<input
-  class="input"
-  [id]="inputId"
-  [type]="type()"
-  [attr.autocomplete]="autocomplete()"
-  [value]="value()"
-  [disabled]="disabled()"
-  [attr.aria-invalid]="errorText() ? 'true' : null"
-  [attr.aria-describedby]="describedBy()"
-  (input)="onInput($event)"
-  (blur)="onBlur()"
-/>
+@if (multiline()) {
+  <textarea
+    class="input textarea"
+    [id]="inputId"
+    rows="4"
+    [attr.maxlength]="maxLength()"
+    [value]="value()"
+    [disabled]="disabled()"
+    [attr.aria-invalid]="errorText() ? 'true' : null"
+    [attr.aria-describedby]="describedBy()"
+    (input)="onInput($event)"
+    (blur)="onBlur()"
+  ></textarea>
+} @else {
+  <input
+    class="input"
+    [id]="inputId"
+    [type]="type()"
+    [attr.autocomplete]="autocomplete()"
+    [attr.maxlength]="maxLength()"
+    [value]="value()"
+    [disabled]="disabled()"
+    [attr.aria-invalid]="errorText() ? 'true' : null"
+    [attr.aria-describedby]="describedBy()"
+    (input)="onInput($event)"
+    (blur)="onBlur()"
+  />
+}
 @if (errorText()) {
   <p class="error" [id]="inputId + '-error'" role="alert">{{ errorText() }}</p>
 } @else if (hint()) {

@@ -15,6 +15,9 @@ export class TextField implements ControlValueAccessor {
   readonly type = input<'text' | 'email' | 'password'>('text');
   readonly autocomplete = input<string>('off');
   readonly hint = input<string>('');
+  /** Многострочное поле для описания; по умолчанию однострочное. */
+  readonly multiline = input<boolean>(false);
+  readonly maxLength = input<number | null>(null);
   readonly errorText = input<string | null>(null);
 
   protected readonly inputId = `field-${nextId++}`;

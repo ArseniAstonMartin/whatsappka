@@ -1,6 +1,6 @@
 import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
-import { TitleStrategy, provideRouter } from '@angular/router';
+import { TitleStrategy, provideRouter, withComponentInputBinding } from '@angular/router';
 
 import { routes } from './app.routes';
 import { RussianTitleStrategy } from './core/russian-title-strategy';
@@ -18,7 +18,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       inject(RealtimeService);
     }),
-    provideRouter(routes),
+    provideRouter(routes, withComponentInputBinding()),
     { provide: TitleStrategy, useClass: RussianTitleStrategy },
   ]
 };

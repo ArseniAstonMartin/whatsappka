@@ -23,6 +23,10 @@ export class MediaView implements OnDestroy {
   /** Размер варианта для изображений; null — оригинал. */
   readonly variant = input<'320' | '1280' | null>(null);
   readonly kind = input<'image' | 'document'>('image');
+  /** circle — аватар: изображение обрезается кругом. */
+  readonly shape = input<'rect' | 'circle'>('rect');
+  /** Если варианта нет (маленький исходник), показываем оригинал. */
+  readonly fallbackToOriginal = input<boolean>(false);
   readonly label = input.required<string>();
 
   protected readonly objectUrl = signal<string | null>(null);
@@ -66,6 +70,10 @@ export class MediaView implements OnDestroy {
         this.loading.set(false);
       },
       error: (error: unknown) => {
+        if (variant && this.fallbackToOriginal()) {
+          this.load(id, null);
+          return;
+        }
         this.loading.set(false);
         this.error.set(toProblem(error).message);
       },

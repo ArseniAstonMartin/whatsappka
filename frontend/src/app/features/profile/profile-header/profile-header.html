@@ -1,0 +1,35 @@
+<div class="cover">
+  @if (coverMediaId()) {
+    <app-media-view [mediaId]="coverMediaId()!" variant="1280" [fallbackToOriginal]="true" [label]="'Обложка профиля'" />
+  }
+</div>
+<div class="identity">
+  <div class="avatar">
+    @if (avatarMediaId()) {
+      <app-media-view
+        [mediaId]="avatarMediaId()!"
+        variant="320"
+        shape="circle"
+        [fallbackToOriginal]="true"
+        [label]="'Аватар: ' + displayName()"
+      />
+    } @else {
+      <app-avatar [name]="displayName()" [size]="96" />
+    }
+  </div>
+  <div class="names">
+    <h1 class="name">
+      <span>{{ displayName() }}</span>
+      @if (verified()) {
+        <app-verified-badge [size]="20" />
+      }
+    </h1>
+    <p class="username">&#64;{{ username() }}</p>
+    @if (statusText()) {
+      <p class="status">{{ statusText() }}</p>
+    }
+  </div>
+</div>
+@if (bio()) {
+  <p class="bio">{{ bio() }}</p>
+}

@@ -1,0 +1,52 @@
+:host {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.section-title {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-h2);
+  line-height: 1.25;
+}
+
+.sub-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-body);
+  font-weight: 700;
+}
+
+.photos {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.photos section {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.posts {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

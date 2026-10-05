@@ -1,0 +1,50 @@
+@if (loading()) {
+  <div class="stack" aria-busy="true">
+    <app-skeleton width="100%" height="180px" />
+    <app-skeleton width="40%" height="24px" />
+  </div>
+} @else if (notFound()) {
+  <app-state-panel kind="not-found" title="Пользователь не найден" message="Возможно, ссылка неверна или аккаунт отключён." />
+} @else if (error()) {
+  <app-state-panel kind="error" title="Не удалось загрузить профиль" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="load()">Повторить</button>
+  </app-state-panel>
+} @else if (profile(); as p) {
+  <app-profile-header
+    [displayName]="p.displayName"
+    [username]="p.username"
+    [statusText]="p.statusText"
+    [bio]="p.bio"
+    [verified]="p.verified"
+    [avatarMediaId]="p.avatarMediaId"
+    [coverMediaId]="p.coverMediaId"
+  />
+
+  @if (relations(); as r) {
+    <div class="counts" aria-label="Связи">
+      <span>Подписчики: {{ r.followers }}</span>
+      <span>Подписки: {{ r.following }}</span>
+    </div>
+    @if (r.self) {
+      <p class="hint">Это ваш профиль. Редактирование — в разделе «Профиль».</p>
+    } @else {
+      <div class="actions">
+        <button
+          type="button"
+          appButton
+          [variant]="r.followedByViewer ? 'secondary' : 'primary'"
+          [busy]="followBusy()"
+          [disabled]="followBusy()"
+          (click)="toggleFollow()"
+        >
+          {{ followLabel() }}
+        </button>
+      </div>
+    }
+  }
+
+  <section class="posts" aria-labelledby="posts-title">
+    <h2 id="posts-title" class="section-title">Публикации</h2>
+    <app-state-panel kind="empty" title="Публикаций пока нет" message="Записи появятся, когда подключится лента." />
+  </section>
+}

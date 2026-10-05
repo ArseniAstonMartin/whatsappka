@@ -40,3 +40,9 @@
   font-size: var(--font-size-small);
   color: var(--color-danger);
 }
+
+.textarea {
+  min-height: 96px;
+  resize: vertical;
+  line-height: var(--line-height-body);
+}

@@ -33,3 +33,10 @@
   border-radius: var(--radius-control);
   background: var(--color-surface-muted);
 }
+
+.circle {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: var(--radius-avatar);
+}

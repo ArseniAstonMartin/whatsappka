@@ -1,0 +1,40 @@
+<form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  <app-text-field
+    formControlName="displayName"
+    label="Имя"
+    autocomplete="name"
+    [maxLength]="80"
+    [errorText]="errorFor('displayName')"
+  />
+  <app-text-field
+    formControlName="statusText"
+    label="Статус"
+    [maxLength]="140"
+    [hint]="length('statusText') + ' / 140'"
+    [errorText]="errorFor('statusText')"
+  />
+  <app-text-field
+    formControlName="bio"
+    label="О себе"
+    [multiline]="true"
+    [maxLength]="500"
+    [hint]="length('bio') + ' / 500'"
+    [errorText]="errorFor('bio')"
+  />
+  <div class="select-field">
+    <label class="label" for="timezone">Часовой пояс</label>
+    <select id="timezone" class="select" formControlName="timezone">
+      @for (zone of timezones; track zone) {
+        <option [value]="zone">{{ zone }}</option>
+      }
+    </select>
+  </div>
+  @if (formMessage()) {
+    <p class="form-error" role="alert">{{ formMessage() }}</p>
+  }
+  <div class="actions">
+    <button type="submit" appButton [busy]="saving()" [disabled]="saving()">
+      {{ saving() ? 'Сохраняем…' : 'Сохранить' }}
+    </button>
+  </div>
+</form>

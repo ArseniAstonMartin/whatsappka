@@ -1,0 +1,62 @@
+@if (loading()) {
+  <div class="stack" aria-busy="true">
+    <app-skeleton width="100%" height="180px" />
+    <app-skeleton width="40%" height="24px" />
+  </div>
+} @else if (error()) {
+  <app-state-panel kind="error" title="Не удалось загрузить профиль" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="load()">Повторить</button>
+  </app-state-panel>
+} @else if (profile(); as p) {
+  <h1 class="visually-hidden">Мой профиль</h1>
+  <app-profile-header
+    [displayName]="p.displayName"
+    [username]="p.username"
+    [statusText]="p.statusText"
+    [bio]="p.bio"
+    [verified]="p.verified"
+    [avatarMediaId]="p.avatarMediaId"
+    [coverMediaId]="p.coverMediaId"
+  />
+
+  <div class="actions">
+    <button type="button" appButton variant="secondary" [attr.aria-expanded]="editing()" (click)="toggleEdit()">
+      {{ editing() ? 'Закрыть редактирование' : 'Редактировать профиль' }}
+    </button>
+  </div>
+
+  @if (editing()) {
+    <app-card>
+      <h2 class="section-title">Данные профиля</h2>
+      <app-profile-edit [profile]="p" (saved)="onSaved($event)" />
+    </app-card>
+    <app-card>
+      <h2 class="section-title">Фото</h2>
+      <div class="photos">
+        <section aria-labelledby="avatar-title">
+          <h3 id="avatar-title" class="sub-title">Аватар</h3>
+          <app-media-upload purpose="AVATAR" (ready)="attach('PROFILE_AVATAR', $event)" />
+          @if (p.avatarMediaId) {
+            <button type="button" appButton variant="ghost" (click)="detach('PROFILE_AVATAR', p.avatarMediaId)">
+              Убрать аватар
+            </button>
+          }
+        </section>
+        <section aria-labelledby="cover-title">
+          <h3 id="cover-title" class="sub-title">Обложка</h3>
+          <app-media-upload purpose="COVER" (ready)="attach('PROFILE_COVER', $event)" />
+          @if (p.coverMediaId) {
+            <button type="button" appButton variant="ghost" (click)="detach('PROFILE_COVER', p.coverMediaId)">
+              Убрать обложку
+            </button>
+          }
+        </section>
+      </div>
+    </app-card>
+  }
+
+  <section class="posts" aria-labelledby="posts-title">
+    <h2 id="posts-title" class="section-title">Публикации</h2>
+    <app-state-panel kind="empty" title="Публикаций пока нет" message="Записи появятся, когда подключится лента." />
+  </section>
+}

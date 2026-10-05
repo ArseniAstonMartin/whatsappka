@@ -4,7 +4,7 @@
   <p class="error" role="alert">{{ error() }}</p>
 } @else if (objectUrl()) {
   @if (kind() === 'image') {
-    <img class="image" [src]="objectUrl()" [alt]="label()" />
+    <img class="image" [class.circle]="shape() === 'circle'" [src]="objectUrl()" [alt]="label()" />
   } @else {
     <div class="card">
       <app-icon name="file" [size]="24" />

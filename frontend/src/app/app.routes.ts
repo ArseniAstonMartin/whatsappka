@@ -47,9 +47,13 @@ export const routes: Routes = [
       },
       {
         path: 'profile',
+        title: 'Мой профиль',
+        loadComponent: () => import('./features/profile/own-profile/own-profile').then((m) => m.OwnProfilePage),
+      },
+      {
+        path: 'users/:username',
         title: 'Профиль',
-        loadComponent: section,
-        data: { heading: 'Профиль', kind: 'empty', title: 'Профиль пока пуст', message: 'Здесь появятся обложка, имя, статус и записи.' },
+        loadComponent: () => import('./features/profile/public-profile/public-profile').then((m) => m.PublicProfilePage),
       },
       {
         path: 'settings',
