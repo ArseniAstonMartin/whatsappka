@@ -19,6 +19,9 @@ public class MediaAsset {
     @Column(name = "owner_id", nullable = false)
     private UUID ownerId;
 
+    @Column(name = "purpose", nullable = false, length = 20)
+    private String purpose;
+
     @Column(name = "original_object_key", nullable = false, unique = true, length = 500)
     private String originalObjectKey;
 
@@ -55,11 +58,21 @@ public class MediaAsset {
     protected MediaAsset() {
     }
 
-    public MediaAsset(UUID id, UUID ownerId, String filename, long sizeBytes, Instant now) {
+    public MediaAsset(
+            UUID id,
+            UUID ownerId,
+            MediaPurpose purpose,
+            String filename,
+            String detectedMime,
+            long sizeBytes,
+            Instant now
+    ) {
         this.id = id;
         this.ownerId = ownerId;
+        this.purpose = purpose.name();
         this.originalObjectKey = MediaKeys.original(ownerId, id);
         this.filename = filename;
+        this.detectedMime = detectedMime;
         this.sizeBytes = sizeBytes;
         this.status = STATUS_UPLOADED;
         this.createdAt = now;
@@ -80,6 +93,22 @@ public class MediaAsset {
 
     public String status() {
         return status;
+    }
+
+    public String purpose() {
+        return purpose;
+    }
+
+    public String filename() {
+        return filename;
+    }
+
+    public String detectedMime() {
+        return detectedMime;
+    }
+
+    public long sizeBytes() {
+        return sizeBytes;
     }
 
     public boolean isDeleted() {

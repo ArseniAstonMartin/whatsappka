@@ -26,6 +26,11 @@ whatsappka:
       client-secret: ${GOOGLE_CLIENT_SECRET:}
       redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:8080/api/v1/auth/google/callback}
       app-url: ${APP_URL:http://localhost:4200}
+  media-limits:
+    user-quota-bytes: ${MEDIA_USER_QUOTA_BYTES:268435456}
+    global-limit-bytes: ${MEDIA_GLOBAL_LIMIT_BYTES:10737418240}
+    min-free-disk-bytes: ${MEDIA_MIN_FREE_DISK_BYTES:5368709120}
+    disk-path: ${MEDIA_DISK_PATH:.}
   bootstrap-admin:
     email: ${BOOTSTRAP_ADMIN_EMAIL:}
     username: ${BOOTSTRAP_ADMIN_USERNAME:}
