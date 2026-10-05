@@ -1,0 +1,15 @@
+@if (loading()) {
+  <app-skeleton width="100%" height="200px" />
+} @else if (error()) {
+  <p class="error" role="alert">{{ error() }}</p>
+} @else if (objectUrl()) {
+  @if (kind() === 'image') {
+    <img class="image" [src]="objectUrl()" [alt]="label()" />
+  } @else {
+    <div class="card">
+      <app-icon name="file" [size]="24" />
+      <span class="name">{{ label() }}</span>
+      <button type="button" appButton variant="secondary" (click)="download()">Скачать</button>
+    </div>
+  }
+}

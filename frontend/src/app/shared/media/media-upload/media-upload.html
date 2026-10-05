@@ -1,0 +1,59 @@
+<div class="upload">
+  <p class="rules" [id]="'rules-' + purpose()">
+    {{ rules().label }}: {{ rules().allowedText }}
+  </p>
+
+  @if (phase() === 'idle') {
+    <input
+      #picker
+      type="file"
+      class="picker"
+      tabindex="-1"
+      aria-hidden="true"
+      [accept]="rules().accept"
+      (change)="onPick($event)"
+    />
+    <button type="button" appButton variant="secondary" [attr.aria-describedby]="'rules-' + purpose()" (click)="picker.click()">
+      Выбрать файл
+    </button>
+  }
+
+  @if (phase() === 'uploading') {
+    <div class="row">
+      <span class="status" role="status">Загрузка: {{ progress() }}%</span>
+      <button type="button" appButton variant="ghost" (click)="cancel()">Отменить</button>
+    </div>
+    <progress class="bar" [value]="progress()" max="100" [attr.aria-label]="'Загрузка файла, ' + progress() + ' процентов'"></progress>
+  }
+
+  @if (phase() === 'processing') {
+    <div class="card">
+      <app-icon name="file" [size]="24" />
+      <span class="name">{{ media()?.filename }}</span>
+      <span class="status" role="status">Обработка файла…</span>
+      <button type="button" appButton variant="ghost" aria-label="Отменить и удалить файл" (click)="cancel()">
+        <app-icon name="close" [size]="20" />
+      </button>
+    </div>
+  }
+
+  @if (phase() === 'ready') {
+    <div class="card">
+      <app-icon name="file" [size]="24" />
+      <span class="name">{{ media()?.filename }}</span>
+      <span class="status" role="status">Готово</span>
+      <button type="button" appButton variant="ghost" aria-label="Удалить файл" (click)="remove()">
+        <app-icon name="trash" [size]="20" />
+      </button>
+    </div>
+  }
+
+  @if (phase() === 'failed') {
+    <p class="error" role="alert">{{ failureText() }}</p>
+    <button type="button" appButton variant="secondary" (click)="resetAndPick()">Выбрать другой файл</button>
+  }
+
+  @if (message()) {
+    <p class="error" role="alert">{{ message() }}</p>
+  }
+</div>

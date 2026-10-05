@@ -8,6 +8,8 @@ import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.ApiV1Controller;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -47,12 +49,24 @@ public class MediaController {
         MediaAsset asset = uploads.upload(
                 user.userId(),
                 parsed,
-                request.getHeader(FILENAME_HEADER),
+                decodeFilename(request.getHeader(FILENAME_HEADER)),
                 length,
                 request.getHeader(HttpHeaders.CONTENT_TYPE),
                 request.getInputStream()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(MediaResponse.of(asset));
+    }
+
+    /** Клиент присылает имя в URL-кодировке, чтобы кириллица и пробелы не ломали заголовок. */
+    static String decodeFilename(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        try {
+            return URLDecoder.decode(raw, StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException malformed) {
+            return raw;
+        }
     }
 
     public record MediaResponse(UUID id, String status, String purpose, String mime, long sizeBytes, String filename) {

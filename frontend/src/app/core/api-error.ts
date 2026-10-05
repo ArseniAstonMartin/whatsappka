@@ -22,6 +22,18 @@ const MESSAGES: Record<string, string> = {
   too_many_requests: 'Слишком много попыток. Подождите и попробуйте снова.',
   unauthorized: 'Сессия истекла. Войдите снова.',
   invalid_refresh_token: 'Сессия истекла. Войдите снова.',
+  file_too_large: 'Файл больше допустимого размера для этого назначения',
+  unsupported_media_type: 'Этот формат файла не поддерживается',
+  mime_mismatch: 'Тип файла не совпадает с его содержимым',
+  quota_exceeded: 'Превышена квота хранилища. Удалите ненужные файлы.',
+  storage_limit_reached: 'Общий лимит хранилища исчерпан. Попробуйте позже.',
+  disk_space_low: 'Сейчас недостаточно места для загрузок. Попробуйте позже.',
+  storage_unavailable: 'Хранилище файлов временно недоступно. Попробуйте позже.',
+  length_required: 'Не удалось определить размер файла',
+  media_not_ready: 'Файл ещё обрабатывается',
+  media_in_use: 'Файл привязан и не может быть удалён',
+  purpose_mismatch: 'Файл не подходит для этого места',
+  invalid_purpose: 'Неизвестное назначение файла',
 };
 
 export function toProblem(error: unknown): ApiProblem {

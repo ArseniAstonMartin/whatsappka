@@ -54,6 +54,9 @@
             "styles": [
               "node_modules/@fontsource-variable/manrope/wght.css",
               "src/styles.scss"
+            ],
+            "allowedCommonJsDependencies": [
+              "@stomp/stompjs"
             ]
           },
           "configurations": {
