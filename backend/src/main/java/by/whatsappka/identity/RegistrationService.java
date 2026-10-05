@@ -7,6 +7,7 @@ import by.whatsappka.identity.account.UserProfileRepository;
 import by.whatsappka.identity.account.UserRoleGrant;
 import by.whatsappka.identity.account.UserRoleId;
 import by.whatsappka.identity.account.UserRoleRepository;
+import by.whatsappka.identity.recovery.EmailConfirmationService;
 import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.FieldErrorDetail;
 import java.nio.charset.StandardCharsets;
@@ -27,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class RegistrationService {
 
-    static final int PASSWORD_MAX_BYTES = 72;
+    public static final int PASSWORD_MAX_BYTES = 72;
     private static final String DUPLICATE_DETAIL = "Не удалось зарегистрировать аккаунт с такими данными";
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -35,6 +36,7 @@ public class RegistrationService {
     private final UserProfileRepository profiles;
     private final UserRoleRepository roles;
     private final PasswordEncoder passwordEncoder;
+    private final EmailConfirmationService emailConfirmation;
     private final Clock clock;
 
     public RegistrationService(
@@ -42,12 +44,14 @@ public class RegistrationService {
             UserProfileRepository profiles,
             UserRoleRepository roles,
             PasswordEncoder passwordEncoder,
+            EmailConfirmationService emailConfirmation,
             Clock clock
     ) {
         this.users = users;
         this.profiles = profiles;
         this.roles = roles;
         this.passwordEncoder = passwordEncoder;
+        this.emailConfirmation = emailConfirmation;
         this.clock = clock;
     }
 
@@ -59,7 +63,10 @@ public class RegistrationService {
                     List.of(new FieldErrorDetail("password", "Пароль длиннее 72 байт в UTF-8"))
             );
         }
-        return create(normalizeEmail(email), username.trim(), passwordEncoder.encode(password), null);
+        UserAccount account = create(normalizeEmail(email), username.trim(), passwordEncoder.encode(password), null);
+        // Письмо с подтверждением уходит только если регистрация зафиксирована: ставится в той же транзакции.
+        emailConfirmation.send(account);
+        return account;
     }
 
     /**

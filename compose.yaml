@@ -151,3 +151,21 @@ services:
       minio:
         condition: service_healthy
     restart: "no"
+
+  # Локальный SMTP для проверки писем (подтверждение почты, сброс пароля). Включается профилем mail:
+  # docker compose --profile mail up -d. Приложению нужны SMTP_HOST=mailpit, SMTP_PORT=1025, SMTP_STARTTLS=false.
+  # Перед использованием закрепите образ по digest, как остальные сервисы.
+  mailpit:
+    image: axllent/mailpit:latest
+    profiles:
+      - mail
+    ports:
+      - "127.0.0.1:${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${MAILPIT_UI_PORT:-8025}:8025"
+    networks:
+      - private
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    restart: unless-stopped

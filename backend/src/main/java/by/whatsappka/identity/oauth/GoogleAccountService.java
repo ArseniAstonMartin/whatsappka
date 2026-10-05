@@ -62,6 +62,7 @@ public class GoogleAccountService {
         }
         identities.save(new ExternalIdentity(UUID.randomUUID(), user.id(), ExternalIdentity.PROVIDER_GOOGLE,
                 identity.subject(), clock.instant()));
+        trustProviderEmail(user, identity, clock.instant());
         return new GoogleSignInService.Linked();
     }
 
@@ -85,9 +86,17 @@ public class GoogleAccountService {
         if (!user.isActive()) {
             throw new ApiException(HttpStatus.FORBIDDEN, "account_disabled", "Аккаунт отключён", List.of(), null);
         }
+        trustProviderEmail(user, identity, now);
         user.recordActivity(now);
         SessionService.Opened opened = sessions.open(user, DEVICE_LABEL);
         return new GoogleSignInService.SignedIn(opened.refreshToken(), opened.refreshExpiresAt());
+    }
+
+    /** Google уже подтвердил адрес: если он совпадает с адресом аккаунта, повторное подтверждение не нужно. */
+    private static void trustProviderEmail(UserAccount user, GoogleIdentity identity, Instant now) {
+        if (identity.emailVerified() && user.email().equalsIgnoreCase(identity.email())) {
+            user.markEmailVerified(now);
+        }
     }
 
     private static String localPart(String email) {

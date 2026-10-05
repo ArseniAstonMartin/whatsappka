@@ -88,4 +88,13 @@ public class UserAccount {
             emailVerifiedAt = now;
         }
     }
+
+    public boolean isEmailVerified() {
+        return emailVerifiedAt != null;
+    }
+
+    public void changePassword(String newHash, Instant now) {
+        this.passwordHash = newHash;
+        this.updatedAt = now;
+    }
 }
