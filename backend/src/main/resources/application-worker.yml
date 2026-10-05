@@ -5,3 +5,9 @@ spring:
   datasource:
     hikari:
       maximum-pool-size: 5
+
+whatsappka:
+  jobs:
+    worker-enabled: true
+    concurrency: ${JOB_CONCURRENCY:2}
+    lease: ${JOB_LEASE:PT5M}
