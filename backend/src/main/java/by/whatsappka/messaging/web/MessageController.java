@@ -53,6 +53,7 @@ public class MessageController {
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
         var edited = edits.edit(viewer.userId(), conversationId, messageId, request.body());
+        edits.notifyEdited(conversationId, edited, request.body());
         return new EditResponse(edited.id(), edited.version(), edited.updatedAt());
     }
 
@@ -65,7 +66,8 @@ public class MessageController {
             @RequestBody(required = false) DeleteRequest request,
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
-        edits.delete(viewer.userId(), conversationId, messageId, request == null ? null : request.reason());
+        var deleted = edits.delete(viewer.userId(), conversationId, messageId, request == null ? null : request.reason());
+        edits.notifyDeleted(conversationId, deleted);
     }
 
     /**

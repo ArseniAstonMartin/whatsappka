@@ -42,8 +42,16 @@ export interface ChatMessage {
   senderId: string;
   body: string | null;
   createdAt: string;
+  updatedAt: string;
+  version: number;
   deleted: boolean;
   attachments: Attachment[];
+}
+
+export interface EditedMessage {
+  id: string;
+  version: number;
+  updatedAt: string;
 }
 
 /** Список, карточка, открытие личного диалога и история. Курсор истории — seq последнего показанного сообщения. */
@@ -68,6 +76,20 @@ export class ChatService {
     return lastValueFrom(
       this.http.get<CursorPage<ChatMessage>>(`/api/v1/conversations/${conversationId}/messages`, { params: page(cursor) }),
     );
+  }
+
+  /** Правка доступна автору в течение суток после отправки; seq не меняется. */
+  editMessage(conversationId: string, messageId: string, body: string | null): Promise<EditedMessage> {
+    return lastValueFrom(
+      this.http.patch<EditedMessage>(`/api/v1/conversations/${conversationId}/messages/${messageId}`, { body }),
+    );
+  }
+
+  /** Автор удаляет своё сообщение без причины; модератор чата — чужое только с причиной. */
+  removeMessage(conversationId: string, messageId: string, reason: string | null): Promise<void> {
+    return lastValueFrom(
+      this.http.delete(`/api/v1/conversations/${conversationId}/messages/${messageId}`, { body: reason ? { reason } : undefined }),
+    ).then(() => undefined);
   }
 }
 

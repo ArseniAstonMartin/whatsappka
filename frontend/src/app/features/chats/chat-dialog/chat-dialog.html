@@ -56,10 +56,29 @@
             @if (message.deleted) {
               <p class="muted">Сообщение удалено</p>
             } @else {
+              @if (menuItems(message).length > 0) {
+                <div class="msg-menu">
+                  <app-menu-button label="Действия" [items]="menuItems(message)" (selected)="onMenuAction(message, $event)" />
+                </div>
+              }
               @if (senderName(message); as name) {
                 <p class="sender">{{ name }}</p>
               }
-              @if (message.body) {
+              @if (editingId() === message.id) {
+                <form class="inline-form" (ngSubmit)="submitEdit(message)" novalidate>
+                  <app-text-field
+                    [formControl]="editControl"
+                    label="Текст сообщения"
+                    [multiline]="true"
+                    [maxLength]="4000"
+                    [errorText]="editError()"
+                  />
+                  <div class="form-actions">
+                    <button type="submit" appButton [busy]="editBusy()" [disabled]="editBusy()">Сохранить</button>
+                    <button type="button" appButton variant="ghost" (click)="toggleEdit(message)">Отмена</button>
+                  </div>
+                </form>
+              } @else if (message.body) {
                 <p class="text">{{ message.body }}</p>
               }
               @for (attachment of message.attachments; track attachment.mediaId) {
@@ -71,8 +90,24 @@
                   [label]="purposeLabel(attachment.purpose)"
                 />
               }
+              @if (reasonPromptId() === message.id) {
+                <form class="inline-form" (ngSubmit)="submitReasonDelete(message)" novalidate>
+                  <app-text-field [formControl]="reasonControl" label="Причина удаления" [errorText]="reasonError()" />
+                  <div class="form-actions">
+                    <button type="submit" appButton variant="danger" [busy]="reasonBusy()" [disabled]="reasonBusy()">
+                      Удалить
+                    </button>
+                    <button type="button" appButton variant="ghost" (click)="cancelReasonPrompt()">Отмена</button>
+                  </div>
+                </form>
+              }
             }
-            <time class="time" [attr.datetime]="message.createdAt">{{ time(message.createdAt) }}</time>
+            <time class="time" [attr.datetime]="message.createdAt">
+              {{ time(message.createdAt) }}
+              @if (edited(message)) {
+                · изменено
+              }
+            </time>
           </li>
         }
         @for (item of pending(); track item.clientMessageId) {

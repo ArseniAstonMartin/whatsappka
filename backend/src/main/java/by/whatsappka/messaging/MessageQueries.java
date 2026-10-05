@@ -34,6 +34,8 @@ public class MessageQueries {
             UUID senderId,
             String body,
             Instant createdAt,
+            Instant updatedAt,
+            long version,
             boolean deleted,
             List<Attachment> attachments
     ) {
@@ -69,6 +71,8 @@ public class MessageQueries {
                     row.senderId(),
                     deleted ? null : row.body(),
                     row.createdAt(),
+                    row.updatedAt(),
+                    row.version(),
                     deleted,
                     deleted ? List.of() : attachments.getOrDefault(row.id(), List.of())));
         }
@@ -110,7 +114,7 @@ public class MessageQueries {
     }
 
     private record Row(UUID id, long seq, UUID senderId, String body, Instant createdAt,
-                       Instant deletedAt) {
+                       Instant updatedAt, long version, Instant deletedAt) {
     }
 
     private static final RowMapper<Row> ROW = (rs, n) -> new Row(
@@ -119,5 +123,7 @@ public class MessageQueries {
             UUID.fromString(rs.getString("sender_id")),
             rs.getString("body"),
             rs.getTimestamp("created_at").toInstant(),
+            rs.getTimestamp("updated_at").toInstant(),
+            rs.getLong("version"),
             rs.getTimestamp("deleted_at") == null ? null : rs.getTimestamp("deleted_at").toInstant());
 }

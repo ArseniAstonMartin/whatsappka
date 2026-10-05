@@ -1,10 +1,15 @@
 package by.whatsappka.messaging;
 
+import by.whatsappka.platform.realtime.RealtimeEvent;
+import by.whatsappka.platform.realtime.RealtimePublisher;
 import by.whatsappka.platform.web.ApiException;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -14,8 +19,13 @@ import org.springframework.transaction.annotation.Transactional;
  * Правка и удаление сообщений. Всё идёт под блокировкой чата, событие пишется в той же транзакции.
  * Seq сообщения не меняется. Правит только автор и только в течение суток; удаляет автор без срока,
  * модератор чата — чужое только с причиной и записью в аудит.
+ *
+ * <p>Realtime-рассылку {@code notifyEdited}/{@code notifyDeleted} вызывающий код запускает отдельно,
+ * уже после того как {@code edit}/{@code delete} зафиксировали транзакцию — иначе участник получил бы
+ * сигнал о правке, которая могла ещё откатиться.
  */
 @Service
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class MessageEditService {
 
     public record Edited(UUID id, long version, Instant updatedAt) {
@@ -23,11 +33,13 @@ public class MessageEditService {
 
     private final JdbcTemplate jdbc;
     private final MessageEvents events;
+    private final RealtimePublisher realtime;
     private final Clock clock;
 
-    public MessageEditService(JdbcTemplate jdbc, MessageEvents events, Clock clock) {
+    public MessageEditService(JdbcTemplate jdbc, MessageEvents events, RealtimePublisher realtime, Clock clock) {
         this.jdbc = jdbc;
         this.events = events;
+        this.realtime = realtime;
         this.clock = clock;
     }
 
@@ -62,7 +74,7 @@ public class MessageEditService {
      * причина обязательна и попадает в аудит.
      */
     @Transactional
-    public void delete(UUID actor, UUID conversationId, UUID messageId, String reason) {
+    public Edited delete(UUID actor, UUID conversationId, UUID messageId, String reason) {
         lock(conversationId);
         requireActiveMember(conversationId, actor);
         Target target = load(conversationId, messageId);
@@ -79,12 +91,40 @@ public class MessageEditService {
             }
             cleanReason = MessageRules.requireReason(reason);
         }
-        jdbc.update(MessageSql.DELETE_MESSAGE, messageId);
+        Edited deleted = jdbc.queryForObject(MessageSql.DELETE_MESSAGE, (rs, n) -> new Edited(
+                messageId, rs.getLong("version"), rs.getTimestamp("updated_at").toInstant()), messageId);
         if (!own) {
             jdbc.update(MessageSql.INSERT_AUDIT, UUID.randomUUID(), messageId, conversationId, actor,
                     "DELETED_BY_ADMIN", cleanReason);
         }
         events.record(conversationId, "message.deleted", actor, messageId);
+        return deleted;
+    }
+
+    /** Рассылка после коммита: другие открытые диалоги обновляют тот же пузырь по id/version без перезагрузки. */
+    @Transactional(readOnly = true)
+    public void notifyEdited(UUID conversationId, Edited edited, String body) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("messageId", edited.id().toString());
+        payload.put("body", body);
+        payload.put("version", edited.version());
+        payload.put("updatedAt", edited.updatedAt().toString());
+        broadcast(conversationId, "message.edited", edited.id(), payload);
+    }
+
+    @Transactional(readOnly = true)
+    public void notifyDeleted(UUID conversationId, Edited deleted) {
+        broadcast(conversationId, "message.deleted", deleted.id(), Map.of(
+                "messageId", deleted.id().toString(),
+                "version", deleted.version(), "updatedAt", deleted.updatedAt().toString()));
+    }
+
+    private void broadcast(UUID conversationId, String type, UUID messageId, Map<String, Object> payload) {
+        List<UUID> members = jdbc.queryForList(MessageSql.ACTIVE_MEMBERS, UUID.class, conversationId);
+        for (UUID member : members) {
+            realtime.deliver(member, new RealtimeEvent(
+                    UUID.randomUUID(), type, Instant.now(), messageId, 0L, conversationId, null, payload));
+        }
     }
 
     private void lock(UUID conversationId) {

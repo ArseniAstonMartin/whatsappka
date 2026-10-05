@@ -63,6 +63,8 @@ const MESSAGES: Record<string, string> = {
   invitation_closed: 'Приглашение уже закрыто',
   invitation_expired: 'Срок приглашения истёк',
   inviter_no_longer_allowed: 'Пригласивший больше не может приглашать в этот чат',
+  message_deleted: 'Сообщение удалено',
+  edit_window_closed: 'Править сообщение можно в течение суток после отправки',
 };
 
 /** Тот же словарь кодов, которым пользуется {@link toProblem} — для ошибок не из HTTP (например, STOMP). */

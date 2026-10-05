@@ -63,7 +63,7 @@ final class MessageSql {
      * Блокировку здесь не проверяем: история личного диалога сохраняется.
      */
     static final String HISTORY_FIRST = """
-            SELECT msg.id, msg.seq, msg.sender_id, msg.body, msg.created_at, msg.deleted_at
+            SELECT msg.id, msg.seq, msg.sender_id, msg.body, msg.created_at, msg.updated_at, msg.version, msg.deleted_at
             FROM messages msg
             WHERE msg.conversation_id = ? AND msg.seq > ?
             ORDER BY msg.seq DESC
@@ -71,7 +71,7 @@ final class MessageSql {
             """;
 
     static final String HISTORY_BEFORE = """
-            SELECT msg.id, msg.seq, msg.sender_id, msg.body, msg.created_at, msg.deleted_at
+            SELECT msg.id, msg.seq, msg.sender_id, msg.body, msg.created_at, msg.updated_at, msg.version, msg.deleted_at
             FROM messages msg
             WHERE msg.conversation_id = ? AND msg.seq > ? AND msg.seq < ?
             ORDER BY msg.seq DESC
@@ -121,6 +121,7 @@ final class MessageSql {
     static final String DELETE_MESSAGE = """
             UPDATE messages SET body = NULL, deleted_at = now(), version = version + 1, updated_at = now()
             WHERE id = ?
+            RETURNING version, updated_at
             """;
 
     /** Модератор чата: владелец или действующий участник с ролью ADMIN. */
