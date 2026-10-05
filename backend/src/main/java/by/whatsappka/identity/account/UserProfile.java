@@ -24,6 +24,19 @@ public class UserProfile {
     @Column(name = "status_text", nullable = false, length = 140)
     private String statusText;
 
+    @Column(name = "avatar_media_id")
+    private UUID avatarMediaId;
+
+    @Column(name = "cover_media_id")
+    private UUID coverMediaId;
+
+    /** Заполняется только административным действием; пользователь флаг не меняет. */
+    @Column(name = "verified_at")
+    private Instant verifiedAt;
+
+    @Column(name = "verified_by")
+    private UUID verifiedBy;
+
     @Column(name = "timezone", nullable = false, length = 64)
     private String timezone;
 
@@ -52,5 +65,46 @@ public class UserProfile {
 
     public String displayName() {
         return displayName;
+    }
+
+    public String bio() {
+        return bio;
+    }
+
+    public String statusText() {
+        return statusText;
+    }
+
+    public String timezone() {
+        return timezone;
+    }
+
+    public UUID avatarMediaId() {
+        return avatarMediaId;
+    }
+
+    public UUID coverMediaId() {
+        return coverMediaId;
+    }
+
+    public boolean isVerified() {
+        return verifiedAt != null;
+    }
+
+    /** Меняет только переданные поля (null — без изменений). Проверки длины и формата делает слой DTO. */
+    public void update(String newDisplayName, String newBio, String newStatusText, String newTimezone, Instant now) {
+        if (newDisplayName != null) {
+            this.displayName = newDisplayName;
+        }
+        if (newBio != null) {
+            this.bio = newBio;
+        }
+        if (newStatusText != null) {
+            this.statusText = newStatusText;
+        }
+        if (newTimezone != null) {
+            this.timezone = newTimezone;
+        }
+        this.updatedAt = now;
     }
 }
