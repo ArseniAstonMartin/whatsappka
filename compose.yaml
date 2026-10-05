@@ -1,0 +1,104 @@
+name: whatsappka
+
+# Локальные PostgreSQL, Redis и одноразовые миграции.
+# Остановка и docker compose down не удаляют именованные volumes.
+
+networks:
+  private:
+    internal: true
+
+volumes:
+  postgres-data:
+    name: whatsappka-postgres
+  redis-data:
+    name: whatsappka-redis
+
+services:
+  postgres:
+    image: postgres:17.11@sha256:86fa57b44a1d38f09970f64ac71eb492f7a9cf94d08b85e1c8f07bb0fc0a1761
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-whatsappka}
+      POSTGRES_USER: ${POSTGRES_USER:-whatsappka_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      DB_MIGRATION_PASSWORD: ${DB_MIGRATION_PASSWORD:?DB_MIGRATION_PASSWORD is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    command:
+      - postgres
+      - -c
+      - max_connections=30
+      - -c
+      - shared_buffers=128MB
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init-roles.sh:/docker-entrypoint-initdb.d/01-roles.sh:ro
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - private
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" && PGPASSWORD="$$POSTGRES_PASSWORD" psql --username "$$POSTGRES_USER" --dbname "$$POSTGRES_DB" -tAc "SELECT 1 FROM pg_roles WHERE rolname = 'whatsappka_migrate'" | grep -q 1
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.10.2@sha256:9b838698c59be36d7eb03edcb8dc210c49b91240b92889d0c37d8e29ce3eb12b
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory
+      - 128mb
+      - --maxmemory-policy
+      - volatile-lru
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    networks:
+      - private
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    restart: unless-stopped
+
+  migrate:
+    image: flyway/flyway:13.9.0@sha256:37a6264058aa02ec8def04dd27770dd22ba835b3d73941f9d492b122c70410ad
+    command: migrate
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-whatsappka}
+      FLYWAY_USER: whatsappka_migrate
+      FLYWAY_PASSWORD: ${DB_MIGRATION_PASSWORD:?DB_MIGRATION_PASSWORD is required}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_CONNECT_RETRIES: "30"
+    volumes:
+      - ./backend/src/main/resources/db/migration:/flyway/sql:ro
+    networks:
+      - private
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          memory: 256M

@@ -8,8 +8,19 @@ spring:
 
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/whatsappka}
-    username: ${DB_USERNAME:whatsappka}
+    username: ${DB_USERNAME:whatsappka_app}
     password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 1
+      connection-timeout: 3000
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
 
   data:
     redis:
