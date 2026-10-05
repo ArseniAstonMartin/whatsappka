@@ -112,6 +112,13 @@ final class NotificationSql {
             SELECT author_id FROM posts WHERE id = ? AND deleted_at IS NULL
             """;
 
+    /** Уведомление о решении: без цели и актора, со ссылкой на жалобу. Повтор того же ключа ничего не создаёт. */
+    static final String INSERT_MODERATION_NOTIFICATION = """
+            INSERT INTO notifications (id, recipient_id, event_key, type, report_id, created_at)
+            VALUES (?, ?, ?, ?, ?, now())
+            ON CONFLICT (event_key, recipient_id, type) DO NOTHING
+            """;
+
     /** Прочтение чата до seq снимает уведомления о сообщениях этого чата до того же seq. */
     static final String MARK_CHAT_READ = """
             UPDATE notifications SET read_at = now()

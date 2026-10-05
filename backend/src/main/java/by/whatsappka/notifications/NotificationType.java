@@ -14,7 +14,11 @@ public enum NotificationType {
     COMMENT(EnumSet.of(TargetKind.POST)),
     REPLY(EnumSet.of(TargetKind.COMMENT)),
     REACTION(EnumSet.of(TargetKind.POST, TargetKind.COMMENT)),
-    SYSTEM(EnumSet.noneOf(TargetKind.class));
+    SYSTEM(EnumSet.noneOf(TargetKind.class)),
+    /** Решение по жалобе — заявителю. Ссылка на жалобу хранится отдельно (report_id). */
+    MODERATION_RESULT(EnumSet.noneOf(TargetKind.class)),
+    /** Материал автора скрыт модератором. Отказаться нельзя: это сведения о судьбе своего материала. */
+    CONTENT_HIDDEN(EnumSet.noneOf(TargetKind.class));
 
     public enum TargetKind { USER, CONVERSATION, COMMUNITY, POST, COMMENT }
 
@@ -29,6 +33,6 @@ public enum NotificationType {
     }
 
     public boolean canDisable() {
-        return this != SYSTEM;
+        return this != SYSTEM && this != MODERATION_RESULT && this != CONTENT_HIDDEN;
     }
 }

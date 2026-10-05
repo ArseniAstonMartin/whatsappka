@@ -79,6 +79,23 @@ public class NotificationService {
         }
     }
 
+    /**
+     * Уведомление о решении модератора. Не зависит от предпочтений: это сведения о судьбе материала или жалобы.
+     * Возвращает id только при фактической записи.
+     */
+    @Transactional
+    public Optional<UUID> notifyModeration(UUID recipient, String eventKey, NotificationType type, UUID reportId) {
+        if (type != NotificationType.MODERATION_RESULT && type != NotificationType.CONTENT_HIDDEN) {
+            throw new IllegalArgumentException("not a moderation notification: " + type);
+        }
+        if (eventKey == null || eventKey.isBlank() || reportId == null) {
+            throw new IllegalArgumentException("event key and report are required");
+        }
+        UUID id = UUID.randomUUID();
+        int inserted = jdbc.update(NotificationSql.INSERT_MODERATION_NOTIFICATION, id, recipient, eventKey, type.name(), reportId);
+        return inserted == 1 ? Optional.of(id) : Optional.empty();
+    }
+
     /** Прочтение чата до seq: возвращает число снятых уведомлений о сообщениях. */
     @Transactional
     public int markChatRead(UUID viewer, UUID conversationId, long seq) {

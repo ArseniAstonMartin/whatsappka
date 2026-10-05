@@ -39,7 +39,7 @@ final class ReportSql {
                                       'body', c.body, 'createdAt', c.created_at)::text
             FROM comments c
             JOIN posts p ON p.id = c.post_id
-            WHERE c.id = ? AND c.deleted_at IS NULL AND p.status = 'PUBLISHED' AND p.deleted_at IS NULL
+            WHERE c.id = ? AND c.deleted_at IS NULL AND c.hidden_at IS NULL AND p.status = 'PUBLISHED' AND p.deleted_at IS NULL
               AND (p.group_id IS NULL OR EXISTS (
                   SELECT 1 FROM groups g
                   WHERE g.id = p.group_id AND g.deleted_at IS NULL

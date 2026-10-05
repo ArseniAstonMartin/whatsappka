@@ -207,7 +207,7 @@ public class CommentService {
             return List.of();
         }
         String placeholders = String.join(",", parentIds.stream().map(id -> "?").toList());
-        String sql = SELECT_BASE + "WHERE c.parent_id IN (" + placeholders + ") ORDER BY c.created_at, c.id";
+        String sql = SELECT_BASE + "WHERE c.hidden_at IS NULL AND c.parent_id IN (" + placeholders + ") ORDER BY c.created_at, c.id";
         return jdbc.query(sql, ROW_MAPPER, parentIds.toArray());
     }
 
@@ -248,7 +248,7 @@ public class CommentService {
     }
 
     private static String rootSql(boolean hasCursor) {
-        return SELECT_BASE + "WHERE c.post_id = ? AND c.parent_id IS NULL "
+        return SELECT_BASE + "WHERE c.hidden_at IS NULL AND c.post_id = ? AND c.parent_id IS NULL "
                 + (hasCursor ? "AND (c.created_at, c.id) > (?, ?) " : "")
                 + "ORDER BY c.created_at, c.id LIMIT ?";
     }

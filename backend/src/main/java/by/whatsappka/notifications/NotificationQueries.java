@@ -121,7 +121,7 @@ public class NotificationQueries {
                 case COMMENT, REPLY, REACTION -> linkPostId == null ? null : new Link("POST", linkPostId.toString(), null);
                 case COMMUNITY_INVITATION, JOIN_REQUEST, JOIN_RESULT ->
                         linkGroupSlug == null ? null : new Link("GROUP", null, linkGroupSlug);
-                case SYSTEM -> null;
+                case SYSTEM, MODERATION_RESULT, CONTENT_HIDDEN -> null;
             };
         }
     }

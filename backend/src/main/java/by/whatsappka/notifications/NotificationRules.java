@@ -33,7 +33,7 @@ public final class NotificationRules {
     public static void requireValidTarget(UUID recipient, NotificationType type, UUID actor,
                                           NotificationType.TargetKind kind, UUID targetId) {
         boolean valid = switch (type) {
-            case SYSTEM -> kind == null && targetId == null && actor == null;
+            case SYSTEM, MODERATION_RESULT, CONTENT_HIDDEN -> kind == null && targetId == null && actor == null;
             case FOLLOW -> type.allowsTarget(kind) && recipient.equals(targetId) && actor != null;
             case COMMENT, REPLY, REACTION, MESSAGE -> type.allowsTarget(kind) && targetId != null && actor != null;
             default -> type.allowsTarget(kind) && targetId != null;
