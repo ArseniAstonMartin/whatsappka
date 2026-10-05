@@ -35,7 +35,8 @@ public class MediaAttachService {
             throw new ApiException(HttpStatus.CONFLICT, "media_not_ready",
                     "Файл ещё не готов к привязке", List.of(), null);
         }
-        if (!type.purpose().name().equals(asset.purpose())) {
+        requireClientAttachable(type);
+        if (!type.accepts(asset.purpose())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "purpose_mismatch",
                     "Назначение файла не подходит для этой привязки", List.of(), null);
         }
@@ -61,6 +62,7 @@ public class MediaAttachService {
 
     @Transactional
     public void detach(UUID ownerId, UUID mediaId, MediaLinkType type, UUID linkId) {
+        requireClientAttachable(type);
         ownedLive(ownerId, mediaId);
         if (!linkId.equals(ownerId)) {
             throw ApiException.forbidden();
@@ -70,6 +72,12 @@ public class MediaAttachService {
                 mediaId, type.name(), linkId);
         jdbc.update("UPDATE user_profiles SET " + column + " = NULL, updated_at = now() "
                 + "WHERE user_id = ? AND " + column + " = ?", linkId, mediaId);
+    }
+
+    private static void requireClientAttachable(MediaLinkType type) {
+        if (!type.clientAttachable()) {
+            throw ApiException.forbidden();
+        }
     }
 
     /** Мягкое удаление: только владелец и только без привязок. Доступ к байтам после этого закрыт. */

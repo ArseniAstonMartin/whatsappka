@@ -4,6 +4,8 @@ import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.CursorPage;
 import by.whatsappka.platform.web.PageSize;
 import java.nio.charset.StandardCharsets;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -29,8 +31,13 @@ public class ConversationQueries {
             UUID otherId,
             String otherUsername,
             String otherDisplayName,
-            boolean blocked
+            boolean blocked,
+            LastMessage lastMessage
     ) {
+    }
+
+    /** Последнее видимое участнику сообщение; null, если таких сообщений нет. */
+    public record LastMessage(long seq, String body, UUID senderId, Instant createdAt) {
     }
 
     private static final RowMapper<ConversationView> ROW = (rs, n) -> new ConversationView(
@@ -40,7 +47,19 @@ public class ConversationQueries {
             UUID.fromString(rs.getString("other_id")),
             rs.getString("username"),
             rs.getString("display_name"),
-            rs.getBoolean("blocked"));
+            rs.getBoolean("blocked"),
+            lastMessage(rs));
+
+    private static LastMessage lastMessage(ResultSet rs) throws SQLException {
+        if (rs.getObject("last_seq") == null) {
+            return null;
+        }
+        return new LastMessage(
+                rs.getLong("last_seq"),
+                rs.getString("last_body"),
+                UUID.fromString(rs.getString("last_sender_id")),
+                rs.getTimestamp("last_created_at").toInstant());
+    }
 
     private final JdbcTemplate jdbc;
 

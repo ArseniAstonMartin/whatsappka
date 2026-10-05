@@ -45,17 +45,27 @@ final class ConversationSql {
     /**
      * Список личных диалогов пользователя. Диалог доступен, пока пользователь участник и собеседник активен.
      * Блокировка не скрывает историю: она возвращается флагом blocked, а отправку запрещает отправляющий путь.
+     * Превью — последнее видимое участнику неудалённое сообщение (после начала его интервала).
      */
     private static final String LIST_COLUMNS = """
             SELECT c.id, c.updated_at, u.id AS other_id, u.username, p.display_name,
                    EXISTS (SELECT 1 FROM user_blocks b
                            WHERE (b.blocker_id = m.user_id AND b.blocked_id = u.id)
-                              OR (b.blocker_id = u.id AND b.blocked_id = m.user_id)) AS blocked
+                              OR (b.blocker_id = u.id AND b.blocked_id = m.user_id)) AS blocked,
+                   lm.seq AS last_seq, lm.body AS last_body, lm.sender_id AS last_sender_id,
+                   lm.created_at AS last_created_at
             FROM conversation_memberships m
             JOIN conversations c ON c.id = m.conversation_id AND c.type = 'DIRECT'
             JOIN direct_conversations d ON d.conversation_id = c.id
             JOIN users u ON u.id = CASE WHEN d.user_low_id = m.user_id THEN d.user_high_id ELSE d.user_low_id END
             JOIN user_profiles p ON p.user_id = u.id
+            LEFT JOIN LATERAL (
+                SELECT msg.seq, msg.body, msg.sender_id, msg.created_at
+                FROM messages msg
+                WHERE msg.conversation_id = c.id AND msg.seq > m.joined_seq AND msg.deleted_at IS NULL
+                ORDER BY msg.seq DESC
+                LIMIT 1
+            ) lm ON true
             WHERE m.user_id = ? AND m.left_at IS NULL AND u.status = 'ACTIVE'
             """;
 

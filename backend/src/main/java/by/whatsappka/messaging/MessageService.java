@@ -1,5 +1,6 @@
 package by.whatsappka.messaging;
 
+import by.whatsappka.media.access.MediaLinkType;
 import by.whatsappka.platform.outbox.OutboxWriter;
 import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.social.SocialRelations;
@@ -21,8 +22,6 @@ public class MessageService {
 
     public record Sent(UUID id, long seq, boolean replayed, Instant createdAt) {
     }
-
-    private static final List<String> ATTACHABLE = List.of("CHAT_IMAGE", "CHAT_DOCUMENT");
 
     private final JdbcTemplate jdbc;
     private final SocialRelations relations;
@@ -66,6 +65,7 @@ public class MessageService {
         jdbc.update(MessageSql.INSERT_MESSAGE, id, conversationId, sender, seq, clientMessageId, body, fingerprint);
         for (int i = 0; i < media.size(); i++) {
             jdbc.update(MessageSql.INSERT_ATTACHMENT, id, media.get(i), i + 1);
+            jdbc.update(MessageSql.INSERT_LINK, media.get(i), id);
         }
         outbox.record("conversation", conversationId, "message.created", Map.of(
                 "messageId", id.toString(),
@@ -111,7 +111,7 @@ public class MessageService {
         if (!"READY".equals(row.status())) {
             throw new ApiException(HttpStatus.CONFLICT, "media_not_ready", "Вложение ещё не готово", List.of(), null);
         }
-        if (!ATTACHABLE.contains(row.purpose())) {
+        if (!MediaLinkType.CHAT_ATTACHMENT.accepts(row.purpose())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "purpose_mismatch",
                     "Файл не подходит как вложение чата", List.of(), null);
         }

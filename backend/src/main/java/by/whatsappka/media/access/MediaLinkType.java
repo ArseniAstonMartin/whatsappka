@@ -1,20 +1,29 @@
 package by.whatsappka.media.access;
 
 import by.whatsappka.media.MediaPurpose;
+import java.util.Set;
 
-/** Типы привязок. Для каждого задано назначение файла, которое к нему допустимо. */
+/** Типы привязок. Для каждого задано, какие назначения файла к нему допустимы, и может ли клиент привязать сам. */
 public enum MediaLinkType {
-    PROFILE_AVATAR(MediaPurpose.AVATAR),
-    PROFILE_COVER(MediaPurpose.COVER),
-    GROUP_AVATAR(MediaPurpose.AVATAR);
+    PROFILE_AVATAR(Set.of(MediaPurpose.AVATAR), true),
+    PROFILE_COVER(Set.of(MediaPurpose.COVER), true),
+    GROUP_AVATAR(Set.of(MediaPurpose.AVATAR), true),
+    /** Ставится только отправкой сообщения: назначение и принадлежность проверяет отправка. */
+    CHAT_ATTACHMENT(Set.of(MediaPurpose.CHAT_IMAGE, MediaPurpose.CHAT_DOCUMENT), false);
 
-    private final MediaPurpose purpose;
+    private final Set<MediaPurpose> purposes;
+    private final boolean clientAttachable;
 
-    MediaLinkType(MediaPurpose purpose) {
-        this.purpose = purpose;
+    MediaLinkType(Set<MediaPurpose> purposes, boolean clientAttachable) {
+        this.purposes = purposes;
+        this.clientAttachable = clientAttachable;
     }
 
-    public MediaPurpose purpose() {
-        return purpose;
+    public boolean accepts(String purposeName) {
+        return purposes.stream().anyMatch(purpose -> purpose.name().equals(purposeName));
+    }
+
+    public boolean clientAttachable() {
+        return clientAttachable;
     }
 }
