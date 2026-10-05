@@ -127,6 +127,15 @@ public class SessionService {
         return new AuthenticatedSession(user.id(), session.id());
     }
 
+    /** Проверка для долгоживущих соединений: сессия действует и аккаунт активен. */
+    @Transactional(readOnly = true)
+    public void requireActive(UUID userId, UUID sessionId) {
+        Instant now = clock.instant();
+        sessions.findByIdAndUserId(sessionId, userId).filter(s -> s.isActiveAt(now))
+                .orElseThrow(ApiException::unauthorized);
+        users.findById(userId).filter(UserAccount::isActive).orElseThrow(ApiException::unauthorized);
+    }
+
     @Transactional(readOnly = true)
     public List<AuthSession> listActive(UUID userId) {
         return sessions.findActiveByUserId(userId, clock.instant());

@@ -11,6 +11,7 @@ import com.nimbusds.jwt.SignedJWT;
 import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Date;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -31,6 +32,19 @@ public class AccessTokenVerifier {
             throw new IllegalStateException("Секрет JWT короче 256 бит", e);
         }
         this.clock = clock;
+    }
+
+    /** Срок токена из уже проверенного JWT. Подпись здесь не проверяется: вызывать только после verify. */
+    public Instant expiresAt(String token) {
+        try {
+            Date expiry = SignedJWT.parse(token).getJWTClaimsSet().getExpirationTime();
+            if (expiry == null) {
+                throw ApiException.unauthorized();
+            }
+            return expiry.toInstant();
+        } catch (ParseException e) {
+            throw ApiException.unauthorized();
+        }
     }
 
     public AuthenticatedSession verify(String token) {
