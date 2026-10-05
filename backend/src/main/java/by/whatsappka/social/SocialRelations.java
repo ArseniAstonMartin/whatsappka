@@ -50,6 +50,11 @@ public class SocialRelations {
         return users.findById(targetId).filter(UserAccount::isActive).orElseThrow(ApiException::notFound);
     }
 
+    /** Публичная проверка блокировки между парой (для отправки сообщений и приглашений). */
+    public boolean blockedBetween(UUID a, UUID b) {
+        return blockedEitherWay(a, b);
+    }
+
     /** true, если любой из двух аккаунтов заблокировал другого. */
     protected boolean blockedEitherWay(UUID a, UUID b) {
         Boolean blocked = jdbc.queryForObject(SocialSql.IS_BLOCKED_EITHER_WAY, Boolean.class, a, b, b, a);
