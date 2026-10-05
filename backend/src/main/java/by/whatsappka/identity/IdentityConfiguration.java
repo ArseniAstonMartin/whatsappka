@@ -9,7 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
-@EnableConfigurationProperties(IdentityProperties.class)
+@EnableConfigurationProperties({IdentityProperties.class, BootstrapAdminProperties.class})
 public class IdentityConfiguration {
 
     @Bean

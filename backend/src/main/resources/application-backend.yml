@@ -20,6 +20,10 @@ whatsappka:
     refresh-cookie-secure: ${REFRESH_COOKIE_SECURE:true}
     bcrypt-strength: ${BCRYPT_STRENGTH:10}
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:4200,http://localhost:8080}
+  bootstrap-admin:
+    email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    username: ${BOOTSTRAP_ADMIN_USERNAME:}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:}
 
 springdoc:
   api-docs:
