@@ -1,0 +1,34 @@
+# Only project deliverables are published from the repository root.
+/*
+!/.gitignore
+!/.dockerignore
+!/README.md
+!/LICENSE
+!/NOTICE
+!/.editorconfig
+!/.gitattributes
+!/.env.example
+!/compose.yaml
+!/compose.*.yaml
+!/backend/
+!/frontend/
+!/infra/
+!/docs/
+!/.github/
+
+# Local configuration, generated output, and runtime data.
+**/.env
+**/.env.*
+!**/.env.example
+**/.DS_Store
+**/.idea/
+**/.vscode/
+**/node_modules/
+**/target/
+**/dist/
+**/coverage/
+**/*.log
+**/*.pem
+**/*.key
+**/volumes/
+**/backups/
