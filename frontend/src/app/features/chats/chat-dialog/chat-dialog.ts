@@ -15,7 +15,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ChatMessage, ChatService, Conversation } from '../../../core/chat.service';
+import { ChatMessage, ChatService, Conversation, ReadStatus } from '../../../core/chat.service';
 import { GroupChatMember, GroupChatRole, GroupChatService } from '../../../core/group-chat.service';
 import { ProfileService } from '../../../core/profile.service';
 import { RealtimeEvent, RealtimeService } from '../../../core/realtime/realtime.service';
@@ -33,6 +33,7 @@ import { MediaView } from '../../../shared/media/media-view/media-view';
 import { MediaPurpose } from '../../../shared/media/purposes';
 import { openReport } from '../../../shared/report/report-button';
 import { Dialog } from '@angular/cdk/dialog';
+import { fromEvent, interval } from 'rxjs';
 
 const EDIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -107,6 +108,8 @@ interface TypingPayload {
 }
 
 const TYPING_INTERVAL_MS = 2000;
+/** Статус прочтения обновляется, пока вкладка видима: сервер не присылает чужое прочтение отдельным событием. */
+const READ_STATUS_INTERVAL_MS = 15000;
 
 @Component({
   selector: 'app-chat-dialog',
@@ -196,6 +199,24 @@ export class ChatDialog {
   });
   private lastTypingSignal = 0;
 
+  /** Последнее прочтение, отправленное серверу в этом диалоге. Повторно меньший или равный seq не шлём. */
+  private lastReadSent = 0;
+  /** Последнее своё неудалённое сообщение: под ним показывается подтверждённое прочтение. */
+  protected readonly lastOwnId = computed<string | null>(() => {
+    const own = this.messages().filter((m) => this.isOwn(m) && !m.deleted);
+    return own.at(-1)?.id ?? null;
+  });
+  protected readonly readStatus = signal<ReadStatus | null>(null);
+  /** Подпись только по подтверждённому прочтению: доставку без подтверждения не показываем. */
+  protected readonly readLabel = computed<string | null>(() => {
+    const status = this.readStatus();
+    const chat = this.conversation();
+    if (!status || !chat || status.readBy === 0) {
+      return null;
+    }
+    return chat.type === 'GROUP' ? `Прочитали: ${status.readBy} из ${status.eligible}` : 'Прочитано';
+  });
+
   constructor() {
     effect(() => {
       const conversationId = this.id();
@@ -203,6 +224,22 @@ export class ChatDialog {
     });
     this.realtime.events$.pipe(takeUntilDestroyed()).subscribe((event) => this.onRealtimeEvent(event));
     this.textControl.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.signalTyping());
+    // Вернулась видимость вкладки: отмечаем прочитанным то, что пришло, пока её не было видно.
+    fromEvent(document, 'visibilitychange').pipe(takeUntilDestroyed()).subscribe(() => {
+      if (document.visibilityState === 'visible') {
+        this.markRead();
+        void this.refreshReadStatus();
+      }
+    });
+    // После переподключения сервер не знает о прочтении, отправленном без связи.
+    this.realtime.resync$.pipe(takeUntilDestroyed()).subscribe(() => this.markRead());
+    interval(READ_STATUS_INTERVAL_MS)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        if (document.visibilityState === 'visible') {
+          void this.refreshReadStatus();
+        }
+      });
     inject(DestroyRef).onDestroy(() => this.clearTyping());
   }
 
@@ -214,6 +251,8 @@ export class ChatDialog {
     this.messages.set([]);
     this.pending.set([]);
     this.clearTyping();
+    this.lastReadSent = 0;
+    this.readStatus.set(null);
     try {
       const [conversation, own, page] = await Promise.all([
         this.chats.get(conversationId),
@@ -230,6 +269,8 @@ export class ChatDialog {
       this.messages.set(oldestFirst(page.items));
       this.nextCursor.set(page.nextCursor);
       this.hasMore.set(page.hasMore);
+      this.markRead();
+      void this.refreshReadStatus();
       if (conversation.type === 'GROUP') {
         void this.loadMembers(conversationId);
       }
@@ -585,6 +626,38 @@ export class ChatDialog {
     this.typingIds.set([]);
   }
 
+  /** Прочтение только для открытого и видимого диалога: фоновая вкладка историю не отмечает. */
+  private markRead(): void {
+    if (document.visibilityState !== 'visible') {
+      return;
+    }
+    const latest = this.messages().reduce((max, m) => Math.max(max, m.seq), 0);
+    if (latest <= this.lastReadSent) {
+      return;
+    }
+    if (this.realtime.publish(this.id(), 'read', { seq: latest })) {
+      this.lastReadSent = latest;
+    }
+  }
+
+  private async refreshReadStatus(): Promise<void> {
+    const conversationId = this.id();
+    const messageId = this.lastOwnId();
+    if (!messageId) {
+      this.readStatus.set(null);
+      return;
+    }
+    try {
+      const status = await this.chats.readStatus(conversationId, messageId);
+      if (conversationId === this.id() && messageId === this.lastOwnId()) {
+        this.readStatus.set(status);
+      }
+    } catch {
+      // Подпись прочтения — подсказка: при ошибке она просто не показывается, диалог работает.
+      this.readStatus.set(null);
+    }
+  }
+
   /** Сигнал набора не чаще раза в 2 секунды, как и на сервере. Без соединения набор просто не виден собеседнику. */
   private signalTyping(): void {
     if (this.textControl.value.trim().length === 0) {
@@ -664,6 +737,8 @@ export class ChatDialog {
       if (fresh.length > 0) {
         this.messages.update((list) => [...list, ...fresh]);
         afterNextRender(() => this.scrollToEnd(), { injector: this.injector });
+        this.markRead();
+        void this.refreshReadStatus();
       }
     } catch {
       // приход события — необязательное ускорение; обычная перезагрузка диалога тоже подхватит историю

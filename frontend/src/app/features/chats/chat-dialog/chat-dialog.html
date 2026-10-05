@@ -108,6 +108,11 @@
                 · изменено
               }
             </time>
+            @if (message.id === lastOwnId()) {
+              @if (readLabel(); as label) {
+                <p class="read-status">{{ label }}</p>
+              }
+            }
           </li>
         }
         @for (item of pending(); track item.clientMessageId) {

@@ -48,6 +48,12 @@ export interface ChatMessage {
   attachments: Attachment[];
 }
 
+/** Сколько участников, имевших доступ к сообщению, уже прочитали его. */
+export interface ReadStatus {
+  readBy: number;
+  eligible: number;
+}
+
 export interface EditedMessage {
   id: string;
   version: number;
@@ -75,6 +81,12 @@ export class ChatService {
   history(conversationId: string, cursor: string | null): Promise<CursorPage<ChatMessage>> {
     return lastValueFrom(
       this.http.get<CursorPage<ChatMessage>>(`/api/v1/conversations/${conversationId}/messages`, { params: page(cursor) }),
+    );
+  }
+
+  readStatus(conversationId: string, messageId: string): Promise<ReadStatus> {
+    return lastValueFrom(
+      this.http.get<ReadStatus>(`/api/v1/conversations/${conversationId}/messages/${messageId}/read-status`),
     );
   }
 

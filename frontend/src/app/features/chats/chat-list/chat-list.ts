@@ -1,14 +1,18 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { filter } from 'rxjs';
+import { Subject, debounceTime, filter } from 'rxjs';
 import { ChatService, Conversation } from '../../../core/chat.service';
 import { toProblem } from '../../../core/api-error';
+import { RealtimeService } from '../../../core/realtime/realtime.service';
 import { AppButton } from '../../../shared/ui/button/app-button';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { StatePanel } from '../../../shared/state-panel/state-panel';
 import { MediaView } from '../../../shared/media/media-view/media-view';
+
+/** События, после которых список перечитывается: новое сообщение, прочтение в другом устройстве, состав чата. */
+const REFRESH_EVENTS = ['message.created', 'conversation.read', 'conversation.membership.changed'];
 
 /**
  * Личные диалоги и групповые чаты пользователя страницами (TASK-062). Фильтр работает только по уже
@@ -41,8 +45,21 @@ export class ChatList implements OnInit {
   });
 
   private loadingToken = 0;
+  /** Счётчики непрочитанного и последние сообщения обновляются по событиям, не дожидаясь перехода на страницу. */
+  private readonly refreshRequests = new Subject<void>();
+  private readonly realtime = inject(RealtimeService);
 
   constructor() {
+    this.realtime.events$
+      .pipe(
+        filter((event) => REFRESH_EVENTS.includes(event.type)),
+        takeUntilDestroyed(),
+      )
+      .subscribe(() => this.refreshRequests.next());
+    this.refreshRequests
+      .pipe(debounceTime(300), takeUntilDestroyed())
+      .subscribe(() => void this.refreshQuietly());
+
     /** Возврат к списку (например, после выхода из группового чата) перечитывает его — локального кеша нет. */
     this.router.events
       .pipe(
@@ -54,6 +71,21 @@ export class ChatList implements OnInit {
 
   ngOnInit(): void {
     void this.start();
+  }
+
+  /** Тихое обновление первой страницы: уже загруженные страницы и порядок сохраняются, меняются счётчики и превью. */
+  protected async refreshQuietly(): Promise<void> {
+    try {
+      const page = await this.chats.list(null);
+      const fresh = new Map(page.items.map((chat) => [chat.id, chat]));
+      this.items.update((list) => {
+        const known = new Set(list.map((chat) => chat.id));
+        const added = page.items.filter((chat) => !known.has(chat.id));
+        return [...added, ...list.map((chat) => fresh.get(chat.id) ?? chat)];
+      });
+    } catch {
+      // Счётчики остаются прежними до следующего события или перехода на страницу.
+    }
   }
 
   protected async start(): Promise<void> {
