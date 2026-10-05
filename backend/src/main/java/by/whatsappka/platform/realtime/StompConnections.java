@@ -5,7 +5,9 @@ import by.whatsappka.platform.web.ApiException;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -31,10 +33,12 @@ public class StompConnections {
     private final Map<String, WebSocketSession> sockets = new ConcurrentHashMap<>();
     private final Map<String, Connection> authenticated = new ConcurrentHashMap<>();
     private final SessionService sessions;
+    private final OnlineStatus online;
     private final Clock clock;
 
-    public StompConnections(SessionService sessions, Clock clock) {
+    public StompConnections(SessionService sessions, OnlineStatus online, Clock clock) {
         this.sessions = sessions;
+        this.online = online;
         this.clock = clock;
     }
 
@@ -44,11 +48,12 @@ public class StompConnections {
 
     void closed(String sessionId) {
         sockets.remove(sessionId);
-        authenticated.remove(sessionId);
+        releasePresence(authenticated.remove(sessionId));
     }
 
     void authenticate(String sessionId, Connection connection) {
         authenticated.put(sessionId, connection);
+        online.touch(connection.userId());
     }
 
     /** Возвращает подтверждённое соединение или бросает ошибку доставки, которую клиент увидит как ERROR-кадр. */
@@ -75,15 +80,20 @@ public class StompConnections {
         }
     }
 
+    /** Обход также продлевает присутствие тех, у кого соединение остаётся живым. */
     @Scheduled(fixedDelay = 5000)
     public void sweep() {
+        Set<UUID> alive = new HashSet<>();
         for (Map.Entry<String, Connection> entry : authenticated.entrySet()) {
             Connection connection = entry.getValue();
             boolean expired = !clock.instant().isBefore(connection.expiresAt());
             if (expired || !isSessionActive(connection)) {
                 close(entry.getKey());
+            } else {
+                alive.add(connection.userId());
             }
         }
+        alive.forEach(online::touch);
     }
 
     private boolean isSessionActive(Connection connection) {
@@ -97,7 +107,7 @@ public class StompConnections {
 
     private void close(String sessionId) {
         WebSocketSession socket = sockets.get(sessionId);
-        authenticated.remove(sessionId);
+        releasePresence(authenticated.remove(sessionId));
         if (socket == null) {
             return;
         }
@@ -105,6 +115,13 @@ public class StompConnections {
             socket.close(SESSION_CLOSED);
         } catch (IOException ignored) {
             // Соединение уже оборвано: запись в карте очищается при закрытии транспорта.
+        }
+    }
+
+    /** Присутствие гаснет, когда у пользователя не осталось ни одного живого соединения. */
+    private void releasePresence(Connection removed) {
+        if (removed != null && authenticated.values().stream().noneMatch(c -> c.userId().equals(removed.userId()))) {
+            online.clear(removed.userId());
         }
     }
 }

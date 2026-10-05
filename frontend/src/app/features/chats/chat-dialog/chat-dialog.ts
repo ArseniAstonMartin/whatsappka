@@ -1,11 +1,12 @@
 import {
-  Component,
-  ElementRef,
-  Injector,
-  computed,
-  effect,
   afterNextRender,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  ElementRef,
   inject,
+  Injector,
   input,
   signal,
   untracked,
@@ -100,6 +101,13 @@ interface DeletedPayload {
  * версией — применяются только если она новее уже показанной, поэтому собственное REST-действие и его
  * же эхо по WebSocket не задваивают изменение.
  */
+interface TypingPayload {
+  userId: string;
+  expiresInSeconds: number;
+}
+
+const TYPING_INTERVAL_MS = 2000;
+
 @Component({
   selector: 'app-chat-dialog',
   imports: [
@@ -172,12 +180,30 @@ export class ChatDialog {
 
   private loadToken = 0;
 
+  /** Кто сейчас печатает: id → таймер, который снимает индикатор по сроку из сигнала (сигнал об окончании не нужен). */
+  private readonly typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  protected readonly typingIds = signal<string[]>([]);
+  protected readonly typingLabel = computed<string | null>(() => {
+    const ids = this.typingIds();
+    if (ids.length === 0) {
+      return null;
+    }
+    if (ids.length > 1) {
+      return 'Несколько участников печатают…';
+    }
+    const name = this.memberNames()[ids[0]] ?? this.conversation()?.otherDisplayName ?? 'Кто-то';
+    return `${name} печатает…`;
+  });
+  private lastTypingSignal = 0;
+
   constructor() {
     effect(() => {
       const conversationId = this.id();
       untracked(() => void this.start(conversationId));
     });
     this.realtime.events$.pipe(takeUntilDestroyed()).subscribe((event) => this.onRealtimeEvent(event));
+    this.textControl.valueChanges.pipe(takeUntilDestroyed()).subscribe(() => this.signalTyping());
+    inject(DestroyRef).onDestroy(() => this.clearTyping());
   }
 
   protected async start(conversationId: string): Promise<void> {
@@ -187,6 +213,7 @@ export class ChatDialog {
     this.error.set(null);
     this.messages.set([]);
     this.pending.set([]);
+    this.clearTyping();
     try {
       const [conversation, own, page] = await Promise.all([
         this.chats.get(conversationId),
@@ -523,6 +550,52 @@ export class ChatDialog {
       this.applyEdited(event.payload as EditedPayload);
     } else if (event.type === 'message.deleted') {
       this.applyDeleted(event.payload as DeletedPayload);
+    } else if (event.type === 'typing.changed') {
+      this.onTyping(event.payload as TypingPayload);
+    }
+  }
+
+  /** Сигнал набора обновляет срок индикатора; по его истечении собеседник перестаёт печатать. */
+  private onTyping(payload: TypingPayload): void {
+    if (payload.userId === this.selfId()) {
+      return;
+    }
+    this.stopTyping(payload.userId, false);
+    const seconds = Math.min(Math.max(payload.expiresInSeconds, 1), 10);
+    this.typingTimers.set(payload.userId, setTimeout(() => this.stopTyping(payload.userId), seconds * 1000));
+    this.typingIds.update((ids) => (ids.includes(payload.userId) ? ids : [...ids, payload.userId]));
+  }
+
+  private stopTyping(userId: string, update = true): void {
+    const timer = this.typingTimers.get(userId);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.typingTimers.delete(userId);
+    }
+    if (update) {
+      this.typingIds.update((ids) => ids.filter((id) => id !== userId));
+    }
+  }
+
+  private clearTyping(): void {
+    for (const timer of this.typingTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.typingTimers.clear();
+    this.typingIds.set([]);
+  }
+
+  /** Сигнал набора не чаще раза в 2 секунды, как и на сервере. Без соединения набор просто не виден собеседнику. */
+  private signalTyping(): void {
+    if (this.textControl.value.trim().length === 0) {
+      return;
+    }
+    const now = Date.now();
+    if (now - this.lastTypingSignal < TYPING_INTERVAL_MS) {
+      return;
+    }
+    if (this.realtime.publish(this.id(), 'typing', {})) {
+      this.lastTypingSignal = now;
     }
   }
 

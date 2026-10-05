@@ -143,6 +143,9 @@
 
   @if (!chat.blocked) {
     <div class="composer">
+      @if (typingLabel(); as label) {
+        <p class="typing">{{ label }}</p>
+      }
       @if (attachSlots().length > 0) {
         <div class="slots">
           @for (slot of attachSlots(); track slot.slotId) {
