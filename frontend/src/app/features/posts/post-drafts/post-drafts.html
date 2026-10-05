@@ -1,0 +1,51 @@
+<div class="page">
+  <div class="header">
+    <h1 class="heading">Черновики</h1>
+    <a routerLink="/posts/new" appButton variant="primary">Новая запись</a>
+  </div>
+
+  @if (loading()) {
+    <app-skeleton width="100%" height="56px" />
+  } @else if (error()) {
+    <app-state-panel kind="error" title="Не удалось загрузить черновики" [message]="error()!">
+      <button type="button" appButton variant="secondary" (click)="start()">Повторить</button>
+    </app-state-panel>
+  } @else if (items().length === 0) {
+    <app-state-panel kind="empty" title="Черновиков пока нет" message="Начните новую запись — она сохранится автоматически." />
+  } @else {
+    <ul class="list">
+      @for (post of items(); track post.id) {
+        <li>
+          <app-card>
+            <div class="row">
+              <a class="link" [routerLink]="['/posts', post.id, 'edit']">
+                <span class="excerpt">{{ excerpt(post.body) }}</span>
+                <span class="meta">{{ statusLabel(post.status) }} · обновлено {{ post.updatedAt | date: 'short' }}</span>
+              </a>
+              <button
+                type="button"
+                appButton
+                variant="danger"
+                [busy]="isRemoving(post.id)"
+                [disabled]="isRemoving(post.id)"
+                (click)="remove(post)"
+              >
+                Удалить
+              </button>
+            </div>
+            @if (failureLabel(post.scheduleFailureReason); as reason) {
+              <p class="failure">Публикация не состоялась: {{ reason }}</p>
+            }
+          </app-card>
+        </li>
+      }
+    </ul>
+    @if (hasMore()) {
+      <div class="more">
+        <button type="button" appButton variant="secondary" [busy]="loadingMore()" [disabled]="loadingMore()" (click)="loadMore()">
+          Загрузить ещё
+        </button>
+      </div>
+    }
+  }
+</div>

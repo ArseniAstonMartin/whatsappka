@@ -34,6 +34,21 @@ export const routes: Routes = [
         data: { heading: 'Поиск', kind: 'empty', title: 'Поиск пока недоступен', message: 'Введите запрос, чтобы найти людей, записи, группы и хештеги.' },
       },
       {
+        path: 'posts/drafts',
+        title: 'Черновики',
+        loadComponent: () => import('./features/posts/post-drafts/post-drafts').then((m) => m.PostDrafts),
+      },
+      {
+        path: 'posts/new',
+        title: 'Новая запись',
+        loadComponent: () => import('./features/posts/post-editor/post-editor').then((m) => m.PostEditor),
+      },
+      {
+        path: 'posts/:id/edit',
+        title: 'Редактирование записи',
+        loadComponent: () => import('./features/posts/post-editor/post-editor').then((m) => m.PostEditor),
+      },
+      {
         path: 'groups',
         title: 'Группы',
         loadComponent: () => import('./features/communities/community-catalog/community-catalog').then((m) => m.CommunityCatalog),

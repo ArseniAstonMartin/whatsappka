@@ -1,0 +1,130 @@
+@if (loading()) {
+  <div class="stack" aria-busy="true">
+    <app-skeleton width="100%" height="160px" />
+    <app-skeleton width="40%" height="24px" />
+  </div>
+} @else if (notFound()) {
+  <app-state-panel kind="not-found" title="Запись не найдена" message="Возможно, ссылка неверна или запись удалена." />
+} @else if (loadError()) {
+  <app-state-panel kind="error" title="Не удалось загрузить запись" [message]="loadError()!">
+    <button type="button" appButton variant="secondary" (click)="reloadFromServer()">Повторить</button>
+  </app-state-panel>
+} @else {
+  <div class="editor">
+    <div class="status-row">
+      <span class="status-text" role="status">
+        @switch (saveState()) {
+          @case ('saving') { Сохраняем… }
+          @case ('saved') { Сохранено }
+          @case ('unsaved') { Есть несохранённые изменения }
+          @case ('error') { Не сохранено: {{ saveError() }} }
+          @default { }
+        }
+      </span>
+      <button type="button" appButton variant="secondary" [busy]="saveState() === 'saving'" (click)="save()">Сохранить</button>
+    </div>
+
+    @if (conflicted()) {
+      <app-state-panel kind="error" title="Запись изменена в другом месте" message="Сохранение остановлено, чтобы не затереть чужие правки.">
+        <button type="button" appButton variant="secondary" (click)="reloadFromServer()">Обновить из последней версии</button>
+      </app-state-panel>
+    }
+
+    @if (scheduleFailureLabel(); as reason) {
+      <app-state-panel kind="error" title="Публикация не состоялась" [message]="reason" />
+    }
+
+    @if (postGroupId()) {
+      <p class="hint">Публикация в сообществе</p>
+    }
+
+    <app-card>
+      <form [formGroup]="form" novalidate>
+        <app-text-field
+          formControlName="body"
+          label="Текст"
+          [multiline]="true"
+          [maxLength]="10000"
+          [hint]="bodyLength() + ' / 10000'"
+        />
+      </form>
+    </app-card>
+
+    <app-card>
+      <h2 class="section-title">Изображения</h2>
+      <div class="media-grid">
+        @for (mediaId of existingMedia(); track mediaId) {
+          <div class="media-slot">
+            <app-media-view [mediaId]="mediaId" variant="320" [fallbackToOriginal]="true" label="Изображение записи" />
+            <button type="button" appButton variant="ghost" (click)="removeExistingMedia(mediaId)">Убрать</button>
+          </div>
+        }
+        @for (slotId of newSlotIds(); track slotId) {
+          <div class="media-slot">
+            <app-media-upload purpose="POST_IMAGE" (ready)="onSlotReady(slotId, $event)" (removed)="onSlotRemoved(slotId)" />
+          </div>
+        }
+      </div>
+      <p class="hint">{{ mediaIds().length }} / {{ mediaMax }}</p>
+    </app-card>
+
+    <app-card>
+      <h2 class="section-title">Хештеги</h2>
+      <div class="hashtag-form">
+        <app-text-field [formControl]="hashtagInput" label="Добавить хештег" (keydown.enter)="$event.preventDefault(); addHashtag()" />
+        <button type="button" appButton variant="secondary" (click)="addHashtag()">Добавить</button>
+      </div>
+      @if (hashtags().length > 0) {
+        <ul class="hashtag-list">
+          @for (tag of hashtags(); track tag) {
+            <li class="hashtag-chip">
+              <span>#{{ tag }}</span>
+              <button type="button" appButton variant="ghost" [attr.aria-label]="'Убрать хештег ' + tag" (click)="removeHashtag(tag)">×</button>
+            </li>
+          }
+        </ul>
+      }
+    </app-card>
+
+    @if (status() !== 'PUBLISHED') {
+      <app-card>
+        <h2 class="section-title">Публикация</h2>
+        <div class="publish-actions">
+          <button type="button" appButton [busy]="publishBusy()" [disabled]="publishBusy()" (click)="publishNow()">
+            Опубликовать сейчас
+          </button>
+        </div>
+        <div class="schedule-row">
+          <label for="schedule-at">Отложить до</label>
+          <input
+            id="schedule-at"
+            type="datetime-local"
+            [min]="scheduleMin"
+            [value]="scheduleAt()"
+            (input)="scheduleAt.set($any($event.target).value)"
+          />
+          <span class="hint">Часовой пояс: {{ timeZoneName }}</span>
+          <button type="button" appButton variant="secondary" [busy]="scheduleBusy()" [disabled]="scheduleBusy()" (click)="schedulePost()">
+            {{ status() === 'SCHEDULED' ? 'Перенести время' : 'Запланировать' }}
+          </button>
+          @if (status() === 'SCHEDULED') {
+            <button type="button" appButton variant="ghost" [busy]="scheduleBusy()" [disabled]="scheduleBusy()" (click)="cancelSchedule()">
+              Отменить расписание
+            </button>
+          }
+        </div>
+      </app-card>
+    } @else {
+      <p class="hint">Запись опубликована.</p>
+    }
+
+    @if (postId()) {
+      <app-card>
+        <h2 class="section-title">Опасная зона</h2>
+        <button type="button" appButton variant="danger" [busy]="removing()" [disabled]="removing()" (click)="removePost()">
+          Удалить запись
+        </button>
+      </app-card>
+    }
+  </div>
+}

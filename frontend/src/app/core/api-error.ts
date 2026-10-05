@@ -43,6 +43,15 @@ const MESSAGES: Record<string, string> = {
   request_pending: 'Заявка уже ожидает решения',
   join_request_cooldown: 'Повторная заявка возможна не раньше чем через 24 часа после отказа',
   request_closed: 'Заявка уже закрыта',
+  not_draft: 'Публиковать можно только черновик',
+  version_conflict: 'Запись изменена в другом месте',
+  edit_not_allowed: 'Запись сейчас недоступна для редактирования',
+  empty_post: 'Нужен текст или хотя бы одно готовое изображение',
+  attachment_in_use: 'Изображение уже используется в другой публикации',
+  not_scheduled: 'Запись не отложена',
+  schedule_not_allowed: 'Запись опубликована — расписание недоступно',
+  schedule_in_progress: 'Публикация уже выполняется, повторите через минуту',
+  bad_request: 'Проверьте запрос и попробуйте снова',
 };
 
 export function toProblem(error: unknown): ApiProblem {
