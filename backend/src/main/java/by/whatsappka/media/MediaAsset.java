@@ -149,6 +149,11 @@ public class MediaAsset {
         this.updatedAt = now;
     }
 
+    public void markDeleted(Instant now) {
+        this.deletedAt = now;
+        this.updatedAt = now;
+    }
+
     public boolean isDeleted() {
         return deletedAt != null;
     }
