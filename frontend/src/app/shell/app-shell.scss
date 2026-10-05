@@ -1,0 +1,226 @@
+:host {
+  display: block;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--space-4);
+  top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  transform: translateY(-200%);
+  z-index: 10;
+
+  &:focus {
+    transform: none;
+  }
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  min-height: 100vh;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-4);
+  box-sizing: border-box;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+}
+
+.brand {
+  font-size: var(--font-size-h2);
+  font-weight: 700;
+  color: var(--color-primary);
+  text-decoration: none;
+  padding: var(--space-1) var(--space-2);
+}
+
+.nav-list,
+.top-links,
+.bottom-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.nav-link,
+.icon-link,
+.bottom-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--touch-target);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: background-color var(--motion-fast), color var(--motion-fast);
+
+  &:hover {
+    background: var(--color-surface-muted);
+  }
+
+  &.active {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+}
+
+.content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-bar {
+  display: none;
+}
+
+.main {
+  width: 100%;
+  max-width: 720px;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5);
+}
+
+.connection {
+  margin: var(--space-4) auto 0;
+  width: calc(100% - 2 * var(--space-5));
+  max-width: 720px;
+  box-sizing: border-box;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
+}
+
+.bottom-nav {
+  display: none;
+}
+
+@mixin visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.visually-hidden {
+  @include visually-hidden;
+}
+
+/* Планшет: только иконки, без подписей (подпись остаётся доступной через aria-label). */
+@media (max-width: 1199px) {
+  .shell {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    align-items: center;
+    padding: var(--space-5) var(--space-2);
+  }
+
+  .brand {
+    font-size: var(--font-size-small);
+    text-align: center;
+  }
+
+  .nav-link {
+    justify-content: center;
+    padding: var(--space-2);
+  }
+
+  .label {
+    @include visually-hidden;
+  }
+}
+
+/* Телефон: одна колонка, верхняя и нижняя панели, без боковой навигации. */
+@media (max-width: 767px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .top-links {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .icon-link {
+    justify-content: center;
+    min-width: var(--touch-target);
+    padding: var(--space-2);
+  }
+
+  .main {
+    padding: var(--space-5) var(--space-4) calc(var(--touch-target) + var(--space-7));
+  }
+
+  .bottom-nav {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 5;
+  }
+
+  .bottom-list {
+    display: flex;
+  }
+
+  .bottom-list li {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .bottom-link {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: var(--space-2) var(--space-1);
+    font-size: 12px;
+    text-align: center;
+    border-radius: 0;
+  }
+
+  .connection {
+    margin-top: var(--space-3);
+    width: calc(100% - 2 * var(--space-4));
+  }
+}

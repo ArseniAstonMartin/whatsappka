@@ -1,0 +1,6 @@
+<h1 class="heading">{{ data.heading }}</h1>
+<app-state-panel [kind]="data.kind" [title]="data.title" [message]="data.message">
+  @if (data.kind === 'not-found') {
+    <p><a routerLink="/feed">Перейти в ленту</a></p>
+  }
+</app-state-panel>

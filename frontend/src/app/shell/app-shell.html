@@ -1,0 +1,69 @@
+<a class="skip-link" href="#main">Перейти к содержимому</a>
+
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/feed" aria-label="Ватсапка, в ленту">Ватсапка</a>
+    <nav aria-label="Основная навигация">
+      <ul class="nav-list">
+        @for (item of visibleItems(); track item.path) {
+          <li>
+            <a
+              class="nav-link"
+              [routerLink]="['/', item.path]"
+              routerLinkActive="active"
+              [attr.aria-label]="item.label"
+              [attr.title]="item.label"
+            >
+              <app-icon [name]="item.icon" [size]="24" />
+              <span class="label">{{ item.label }}</span>
+            </a>
+          </li>
+        }
+      </ul>
+    </nav>
+  </aside>
+
+  <div class="content">
+    <header class="top-bar">
+      <a class="brand" routerLink="/feed">Ватсапка</a>
+      <nav aria-label="Дополнительные разделы">
+        <ul class="top-links">
+          @for (item of secondaryItems(); track item.path) {
+            <li>
+              <a class="icon-link" [routerLink]="['/', item.path]" [attr.aria-label]="item.label" [attr.title]="item.label">
+                <app-icon [name]="item.icon" [size]="24" />
+              </a>
+            </li>
+          }
+        </ul>
+      </nav>
+    </header>
+
+    @if (connection.status() !== 'online') {
+      <p class="connection" role="status">
+        @if (connection.status() === 'reconnecting') {
+          Соединение восстанавливается. Данные обновятся автоматически.
+        } @else {
+          Нет связи с сервером. Изменения сохраняются только после подключения.
+        }
+      </p>
+    }
+
+    <main id="main" tabindex="-1" class="main">
+      <router-outlet />
+    </main>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Основная навигация на телефоне">
+    <ul class="bottom-list">
+      @for (item of primaryItems(); track item.path) {
+        <li>
+          <a class="bottom-link" [routerLink]="['/', item.path]" routerLinkActive="active" [attr.aria-label]="item.label">
+            <app-icon [name]="item.icon" [size]="24" />
+            <span>{{ item.label }}</span>
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+</div>
