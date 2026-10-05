@@ -4,6 +4,7 @@ import by.whatsappka.identity.account.UserAccount;
 import by.whatsappka.identity.account.UserAccountRepository;
 import by.whatsappka.identity.account.UserProfile;
 import by.whatsappka.identity.account.UserProfileRepository;
+import by.whatsappka.platform.cache.PublicFieldsCache;
 import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.FieldErrorDetail;
 import by.whatsappka.social.SocialRelations;
@@ -20,39 +21,46 @@ import org.springframework.transaction.annotation.Transactional;
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class ProfileService {
 
+    private static final String PUBLIC_FIELDS_CACHE_KEY_PREFIX = "cache:profile:public:";
+
     private final UserAccountRepository users;
     private final UserProfileRepository profiles;
     private final SocialRelations relations;
+    private final PublicFieldsCache cache;
     private final Clock clock;
 
     public ProfileService(
             UserAccountRepository users,
             UserProfileRepository profiles,
             SocialRelations relations,
+            PublicFieldsCache cache,
             Clock clock
     ) {
         this.users = users;
         this.profiles = profiles;
         this.relations = relations;
+        this.cache = cache;
         this.clock = clock;
     }
 
     @Transactional(readOnly = true)
     public PublicProfile publicProfile(UUID viewerId, String username) {
+        // Авторизация, активность аккаунта и личная блокировка проверяются каждый раз на PostgreSQL,
+        // а не по кэшу: эти решения не подлежат временному устареванию.
         UserAccount account = users.findByUsernameIgnoreCase(username)
                 .filter(UserAccount::isActive)
                 .orElseThrow(ApiException::notFound);
         relations.requireVisibleTo(viewerId, account.id());
-        UserProfile profile = profiles.findById(account.id()).orElseThrow(ApiException::notFound);
+        PublicProfileFields fields = cachedPublicFields(account.id());
         return new PublicProfile(
                 account.id(),
                 account.username(),
-                profile.displayName(),
-                profile.bio(),
-                profile.statusText(),
-                profile.isVerified(),
-                profile.avatarMediaId(),
-                profile.coverMediaId());
+                fields.displayName(),
+                fields.bio(),
+                fields.statusText(),
+                fields.verified(),
+                fields.avatarMediaId(),
+                fields.coverMediaId());
     }
 
     @Transactional(readOnly = true)
@@ -69,7 +77,22 @@ public class ProfileService {
         String timezone = patch.timezone() == null ? null : validTimezone(patch.timezone());
         String displayName = patch.displayName() == null ? null : requireNotBlank(patch.displayName());
         profile.update(displayName, patch.bio(), patch.statusText(), timezone, clock.instant());
+        cache.evict(publicFieldsCacheKey(userId));
         return own(account, profile);
+    }
+
+    private PublicProfileFields cachedPublicFields(UUID userId) {
+        String key = publicFieldsCacheKey(userId);
+        return cache.get(key, PublicProfileFields.class).orElseGet(() -> {
+            UserProfile profile = profiles.findById(userId).orElseThrow(ApiException::notFound);
+            PublicProfileFields fresh = PublicProfileFields.from(profile);
+            cache.put(key, fresh);
+            return fresh;
+        });
+    }
+
+    private static String publicFieldsCacheKey(UUID userId) {
+        return PUBLIC_FIELDS_CACHE_KEY_PREFIX + userId;
     }
 
     private UserAccount activeAccount(UUID userId) {

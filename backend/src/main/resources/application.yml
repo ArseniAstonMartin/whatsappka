@@ -41,6 +41,8 @@ spring:
       port: ${REDIS_PORT:6379}
       username: ${REDIS_USERNAME:}
       password: ${REDIS_PASSWORD:}
+      connect-timeout: 250ms
+      timeout: 250ms
 
 whatsappka:
   media:
