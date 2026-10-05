@@ -1,12 +1,17 @@
 import { Component } from '@angular/core';
 import { BlocksSettings } from './blocks/blocks';
+import { GroupInvitationsSettings } from './group-invitations/group-invitations';
 
-/** Настройки. Блокировки здесь, потому что заблокированный профиль скрыт и на странице пользователя недоступен. */
+/**
+ * Настройки. Блокировки здесь, потому что заблокированный профиль скрыт и на странице пользователя недоступен.
+ * Приглашения в сообщества — пока нет отдельного центра уведомлений (TASK-069).
+ */
 @Component({
   selector: 'app-settings-page',
-  imports: [BlocksSettings],
+  imports: [BlocksSettings, GroupInvitationsSettings],
   template: `
     <h1 class="heading">Настройки</h1>
+    <app-group-invitations-settings />
     <app-blocks-settings />
   `,
   styles: [`

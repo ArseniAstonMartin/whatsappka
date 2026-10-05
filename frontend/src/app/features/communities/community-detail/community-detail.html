@@ -57,6 +57,12 @@
         <button type="button" appButton [busy]="joinBusy()" [disabled]="joinBusy()" (click)="requestJoin()">Подать заявку</button>
       }
     </div>
+  } @else if (v.viewerRole !== 'OWNER') {
+    <div class="actions">
+      <button type="button" appButton variant="ghost" [busy]="leaving()" [disabled]="leaving()" (click)="leave()">
+        Покинуть сообщество
+      </button>
+    </div>
   }
 
   @if (v.viewerRole === 'OWNER') {
@@ -123,6 +129,10 @@
         </button>
       </app-card>
     }
+  }
+
+  @if (v.viewerRole === 'OWNER' || v.viewerRole === 'ADMIN') {
+    <app-community-members [groupId]="v.id" [viewerRole]="v.viewerRole" (changed)="onMembersChanged()" />
   }
 
   <section class="posts" aria-labelledby="posts-title">

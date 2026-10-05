@@ -45,7 +45,29 @@ export interface JoinRequestRef {
   id: string;
 }
 
-/** Запросы сообществ: каталог, карточка, создание/настройки и вступление/заявки (TASK-035..038). */
+export interface CommunityMember {
+  id: string;
+  username: string;
+  displayName: string;
+  role: CommunityRole;
+}
+
+export interface CommunityJoinRequestItem {
+  id: string;
+  requesterId: string;
+  username: string;
+  displayName: string;
+  createdAt: string;
+}
+
+export interface GroupInvitation {
+  id: string;
+  groupId: string;
+  groupName: string;
+  expiresAt: string;
+}
+
+/** Запросы сообществ: каталог, карточка, создание/настройки, вступление/заявки и состав (TASK-035..038, 040). */
 @Injectable({ providedIn: 'root' })
 export class CommunityService {
   private readonly http = inject(HttpClient);
@@ -98,6 +120,63 @@ export class CommunityService {
 
   cancelJoinRequest(groupId: string, requestId: string): Promise<void> {
     return lastValueFrom(this.http.post(`/api/v1/groups/${groupId}/join-requests/${requestId}/cancel`, null)).then(() => undefined);
+  }
+
+  /** Состав виден без ограничений для открытого сообщества, иначе — только участникам (проверяет сервер). */
+  members(groupId: string): Promise<CommunityMember[]> {
+    return lastValueFrom(this.http.get<CommunityMember[]>(`/api/v1/groups/${groupId}/members`));
+  }
+
+  leave(groupId: string): Promise<void> {
+    return lastValueFrom(this.http.post(`/api/v1/groups/${groupId}/leave`, null)).then(() => undefined);
+  }
+
+  removeMember(groupId: string, userId: string): Promise<void> {
+    return lastValueFrom(this.http.post(`/api/v1/groups/${groupId}/members/${userId}/remove`, null)).then(() => undefined);
+  }
+
+  setMemberRole(groupId: string, userId: string, role: 'ADMIN' | 'MEMBER'): Promise<void> {
+    return lastValueFrom(this.http.put(`/api/v1/groups/${groupId}/members/${userId}/role`, { role })).then(() => undefined);
+  }
+
+  transferOwnership(groupId: string, userId: string): Promise<void> {
+    return lastValueFrom(this.http.post(`/api/v1/groups/${groupId}/transfer`, { userId })).then(() => undefined);
+  }
+
+  /** Заявки на вступление: видит только OWNER/ADMIN сообщества. */
+  pendingJoinRequests(groupId: string): Promise<CommunityJoinRequestItem[]> {
+    return lastValueFrom(this.http.get<CommunityJoinRequestItem[]>(`/api/v1/groups/${groupId}/join-requests`));
+  }
+
+  acceptJoinRequest(groupId: string, requestId: string): Promise<void> {
+    return lastValueFrom(this.http.post(`/api/v1/groups/${groupId}/join-requests/${requestId}/accept`, null)).then(() => undefined);
+  }
+
+  rejectJoinRequest(groupId: string, requestId: string): Promise<void> {
+    return lastValueFrom(this.http.post(`/api/v1/groups/${groupId}/join-requests/${requestId}/reject`, null)).then(() => undefined);
+  }
+
+  /** Создание защищено Idempotency-Key: повтор после разрыва связи не создаёт второе приглашение. */
+  invite(groupId: string, userId: string): Promise<JoinRequestRef> {
+    return lastValueFrom(
+      this.http.post<JoinRequestRef>(
+        `/api/v1/groups/${groupId}/invitations`,
+        { userId },
+        { headers: { 'Idempotency-Key': crypto.randomUUID() } },
+      ),
+    );
+  }
+
+  myInvitations(): Promise<GroupInvitation[]> {
+    return lastValueFrom(this.http.get<GroupInvitation[]>('/api/v1/me/group-invitations'));
+  }
+
+  acceptInvitation(invitationId: string): Promise<void> {
+    return lastValueFrom(this.http.post(`/api/v1/group-invitations/${invitationId}/accept`, null)).then(() => undefined);
+  }
+
+  declineInvitation(invitationId: string): Promise<void> {
+    return lastValueFrom(this.http.post(`/api/v1/group-invitations/${invitationId}/decline`, null)).then(() => undefined);
   }
 
   private pageParams(cursor: string | null): Record<string, string> {

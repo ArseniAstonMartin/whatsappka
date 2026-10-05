@@ -16,16 +16,17 @@ import { TextField } from '../../../shared/ui/text-field/text-field';
 import { MediaUpload, UploadedMedia } from '../../../shared/media/media-upload/media-upload';
 import { MediaView } from '../../../shared/media/media-view/media-view';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
+import { CommunityMembers } from '../community-members/community-members';
 
 const ROLE_LABEL: Record<string, string> = { OWNER: 'Владелец', ADMIN: 'Администратор', MEMBER: 'Участник' };
 
 /**
- * Карточка сообщества: просмотр, вступление/заявка для постороннего, настройки для владельца.
- * Управление участниками, заявками и приглашениями — отдельная задача (TASK-040).
+ * Карточка сообщества: просмотр, вступление/заявка для постороннего, настройки для владельца,
+ * выход для участника и управление составом/заявками/приглашениями для OWNER/ADMIN (TASK-040).
  */
 @Component({
   selector: 'app-community-detail',
-  imports: [ReactiveFormsModule, AppButton, Card, Skeleton, StatePanel, TextField, MediaUpload, MediaView, Avatar],
+  imports: [ReactiveFormsModule, AppButton, Card, Skeleton, StatePanel, TextField, MediaUpload, MediaView, Avatar, CommunityMembers],
   templateUrl: './community-detail.html',
   styleUrl: './community-detail.scss',
 })
@@ -48,6 +49,7 @@ export class CommunityDetail implements OnInit {
   protected readonly editing = signal(false);
   protected readonly saving = signal(false);
   protected readonly removing = signal(false);
+  protected readonly leaving = signal(false);
   protected readonly problem = signal<ApiProblem | null>(null);
   protected readonly formMessage = computed(() => this.problem()?.message ?? null);
 
@@ -169,6 +171,37 @@ export class CommunityDetail implements OnInit {
     } finally {
       this.joinBusy.set(false);
     }
+  }
+
+  /** Владелец не выходит без передачи владения или удаления — сервер отклонит, форма это не дублирует. */
+  protected async leave(): Promise<void> {
+    const view = this.view();
+    if (!view || this.leaving()) {
+      return;
+    }
+    const confirmed = await this.confirm.confirm({
+      title: `Покинуть «${view.name}»?`,
+      message: 'Доступ к закрытому составу и публикациям сообщества прекратится. Вернуться можно будет по новой заявке или приглашению.',
+      confirmLabel: 'Покинуть',
+      danger: true,
+    });
+    if (!confirmed) {
+      return;
+    }
+    this.leaving.set(true);
+    try {
+      await this.communities.leave(view.id);
+      this.toasts.show('Вы покинули сообщество');
+      await this.load();
+    } catch (error) {
+      this.toasts.show(toProblem(error).message, 'error');
+    } finally {
+      this.leaving.set(false);
+    }
+  }
+
+  protected async onMembersChanged(): Promise<void> {
+    await this.load();
   }
 
   protected toggleEdit(): void {
