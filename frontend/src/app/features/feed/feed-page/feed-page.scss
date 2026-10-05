@@ -1,0 +1,10 @@
+:host {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--font-size-h1);
+  line-height: 1.2;
+}

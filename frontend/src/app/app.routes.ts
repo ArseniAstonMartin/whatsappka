@@ -24,8 +24,7 @@ export const routes: Routes = [
       {
         path: 'feed',
         title: 'Лента',
-        loadComponent: section,
-        data: { heading: 'Лента', kind: 'empty', title: 'Записей пока нет', message: 'Здесь появятся публикации ваших подписок.' },
+        loadComponent: () => import('./features/feed/feed-page/feed-page').then((m) => m.FeedPage),
       },
       {
         path: 'search',

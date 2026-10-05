@@ -28,13 +28,9 @@ public class HashtagService {
         String tag = PostRules.normalizeHashtag(rawTag);
         int size = PageSize.limit(limit);
         Keyset key = PostListingSupport.decode(cursor);
-        String sql = "SELECT p.id, p.body, p.author_id, p.group_id, p.published_at FROM posts p "
-                + "JOIN post_hashtags ph ON ph.post_id = p.id "
-                + "JOIN hashtags h ON h.id = ph.hashtag_id "
-                + "WHERE h.normalized_name = ? AND p.status = 'PUBLISHED' AND p.deleted_at IS NULL "
-                + "AND " + PostVisibilitySql.GROUP_VISIBLE_TO_VIEWER
-                + (key == null ? "" : "AND (p.published_at, p.id) < (?, ?) ")
-                + "ORDER BY p.published_at DESC, p.id DESC LIMIT ?";
+        String hasTag = "EXISTS (SELECT 1 FROM post_hashtags ph JOIN hashtags h ON h.id = ph.hashtag_id "
+                + "WHERE ph.post_id = p.id AND h.normalized_name = ?)";
+        String sql = PostListingSupport.selectSql(hasTag + " AND " + PostVisibilitySql.GROUP_VISIBLE_TO_VIEWER, key != null);
         List<PostSummaryPublic> rows = key == null
                 ? jdbc.query(sql, PostListingSupport.ROW_MAPPER, tag, viewerId, viewerId, size + 1)
                 : jdbc.query(sql, PostListingSupport.ROW_MAPPER, tag, viewerId, viewerId, Timestamp.from(key.at()), key.id(), size + 1);

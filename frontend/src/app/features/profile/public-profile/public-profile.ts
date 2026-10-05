@@ -1,12 +1,14 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
-import { ProfileService, PublicProfile, Relations } from '../../../core/profile.service';
+import { ProfileService, PublicProfile, Relations, CursorPage } from '../../../core/profile.service';
 import { ChatService } from '../../../core/chat.service';
+import { PostService, PostSummaryPublic } from '../../../core/post.service';
 import { toProblem } from '../../../core/api-error';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
 import { AppButton } from '../../../shared/ui/button/app-button';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { StatePanel } from '../../../shared/state-panel/state-panel';
 import { ProfileHeader } from '../profile-header/profile-header';
+import { PostList } from '../../../shared/post-list/post-list';
 import { ConfirmService } from '../../../shared/ui/confirm-dialog/confirm.service';
 import { Router, RouterLink } from '@angular/router';
 
@@ -16,7 +18,7 @@ import { Router, RouterLink } from '@angular/router';
  */
 @Component({
   selector: 'app-public-profile',
-  imports: [AppButton, Skeleton, StatePanel, ProfileHeader, RouterLink],
+  imports: [AppButton, Skeleton, StatePanel, ProfileHeader, PostList, RouterLink],
   templateUrl: './public-profile.html',
   styleUrl: './public-profile.scss',
 })
@@ -25,7 +27,14 @@ export class PublicProfilePage implements OnInit {
   private readonly toasts = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly chats = inject(ChatService);
+  private readonly posts = inject(PostService);
   private readonly router = inject(Router);
+
+  /** Ссылка стабильна между рендерами; актуального автора читает в момент вызова. */
+  protected readonly loadProfilePosts = (cursor: string | null): Promise<CursorPage<PostSummaryPublic>> => {
+    const profile = this.profile();
+    return profile ? this.posts.profilePosts(profile.id, cursor) : Promise.resolve({ items: [], nextCursor: null, hasMore: false });
+  };
 
   readonly username = input.required<string>();
 

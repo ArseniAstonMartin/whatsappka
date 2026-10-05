@@ -73,12 +73,7 @@ public class FeedService {
     ) {
         int size = PageSize.limit(limit);
         Keyset key = PostListingSupport.decode(cursor);
-        String sql = "SELECT p.id, p.body, p.author_id, p.group_id, p.published_at FROM posts p "
-                + "JOIN users u ON u.id = p.author_id "
-                + "WHERE p.status = 'PUBLISHED' AND p.deleted_at IS NULL AND " + AUTHOR_VISIBLE
-                + "AND " + sourceCondition + " "
-                + (key == null ? "" : "AND (p.published_at, p.id) < (?, ?) ")
-                + "ORDER BY p.published_at DESC, p.id DESC LIMIT ?";
+        String sql = PostListingSupport.selectSql("(" + AUTHOR_VISIBLE + ") AND (" + sourceCondition + ")", key != null);
         List<Object> params = new ArrayList<>();
         params.add(viewerId);
         params.add(viewerId);

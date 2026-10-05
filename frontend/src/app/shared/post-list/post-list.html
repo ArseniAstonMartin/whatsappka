@@ -1,0 +1,32 @@
+@if (loading()) {
+  <div class="stack" aria-busy="true">
+    <app-skeleton width="100%" height="160px" />
+    <app-skeleton width="100%" height="160px" />
+  </div>
+} @else if (error()) {
+  <app-state-panel kind="error" title="Не удалось загрузить записи" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="start()">Повторить</button>
+  </app-state-panel>
+} @else if (items().length === 0) {
+  <app-state-panel kind="empty" [title]="emptyTitle()" [message]="emptyMessage()" />
+} @else {
+  <div class="toolbar">
+    <button type="button" appButton variant="ghost" [busy]="refreshing()" [disabled]="refreshing()" (click)="refreshTop()">
+      Обновить
+    </button>
+  </div>
+  <ul class="list">
+    @for (post of items(); track post.id) {
+      <li>
+        <app-post-card [post]="post" (removed)="onRemoved($event)" />
+      </li>
+    }
+  </ul>
+  @if (hasMore()) {
+    <div class="more">
+      <button type="button" appButton variant="secondary" [busy]="loadingMore()" [disabled]="loadingMore()" (click)="loadMore()">
+        Загрузить ещё
+      </button>
+    </div>
+  }
+}

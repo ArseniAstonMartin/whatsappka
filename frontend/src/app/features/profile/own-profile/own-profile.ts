@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
-import { ProfileService, OwnProfile } from '../../../core/profile.service';
+import { ProfileService, OwnProfile, CursorPage } from '../../../core/profile.service';
+import { PostService, PostSummaryPublic } from '../../../core/post.service';
 import { toProblem } from '../../../core/api-error';
 import { ToastService } from '../../../shared/ui/toast/toast.service';
 import { AppButton } from '../../../shared/ui/button/app-button';
@@ -9,17 +10,24 @@ import { MediaUpload, UploadedMedia } from '../../../shared/media/media-upload/m
 import { StatePanel } from '../../../shared/state-panel/state-panel';
 import { ProfileHeader } from '../profile-header/profile-header';
 import { ProfileEdit } from '../profile-edit/profile-edit';
+import { PostList } from '../../../shared/post-list/post-list';
 
 /** Собственный профиль: просмотр, редактирование и замена аватара и обложки через привязку медиа. */
 @Component({
   selector: 'app-own-profile',
-  imports: [AppButton, Card, Skeleton, MediaUpload, StatePanel, ProfileHeader, ProfileEdit],
+  imports: [AppButton, Card, Skeleton, MediaUpload, StatePanel, ProfileHeader, ProfileEdit, PostList],
   templateUrl: './own-profile.html',
   styleUrl: './own-profile.scss',
 })
 export class OwnProfilePage {
   private readonly profiles = inject(ProfileService);
+  private readonly posts = inject(PostService);
   private readonly toasts = inject(ToastService);
+
+  protected readonly loadOwnPosts = (cursor: string | null): Promise<CursorPage<PostSummaryPublic>> => {
+    const profile = this.profile();
+    return profile ? this.posts.profilePosts(profile.id, cursor) : Promise.resolve({ items: [], nextCursor: null, hasMore: false });
+  };
 
   protected readonly profile = signal<OwnProfile | null>(null);
   protected readonly loading = signal(true);

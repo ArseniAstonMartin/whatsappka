@@ -1,0 +1,56 @@
+<app-card>
+  <div class="header">
+    <a class="author" [routerLink]="['/users', post().authorUsername]">
+      @if (post().authorAvatarMediaId) {
+        <app-media-view
+          [mediaId]="post().authorAvatarMediaId!"
+          variant="320"
+          shape="circle"
+          [fallbackToOriginal]="true"
+          [label]="'Аватар: ' + post().authorDisplayName"
+        />
+      } @else {
+        <app-avatar [name]="post().authorDisplayName" [size]="40" />
+      }
+      <span class="who">
+        <span class="name">{{ post().authorDisplayName }}</span>
+        <span class="username">&#64;{{ post().authorUsername }}</span>
+      </span>
+    </a>
+    <span class="time">
+      {{ post().publishedAt | date: 'short' }}
+      @if (edited()) {
+        · изменено
+      }
+    </span>
+  </div>
+
+  @if (post().body) {
+    <p class="body">{{ post().body }}</p>
+  }
+
+  @if (post().mediaIds.length > 0) {
+    <div class="media-grid">
+      @for (mediaId of post().mediaIds; track mediaId) {
+        <app-media-view [mediaId]="mediaId" variant="1280" [fallbackToOriginal]="true" label="Изображение публикации" />
+      }
+    </div>
+  }
+
+  @if (post().hashtags.length > 0) {
+    <ul class="hashtags">
+      @for (tag of post().hashtags; track tag) {
+        <li>#{{ tag }}</li>
+      }
+    </ul>
+  }
+
+  @if (isOwn()) {
+    <div class="actions">
+      <a [routerLink]="['/posts', post().id, 'edit']" appButton variant="secondary">Редактировать</a>
+      <button type="button" appButton variant="danger" [busy]="removing()" [disabled]="removing()" (click)="remove()">
+        Удалить
+      </button>
+    </div>
+  }
+</app-card>

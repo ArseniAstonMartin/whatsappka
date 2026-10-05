@@ -135,8 +135,10 @@
     <app-community-members [groupId]="v.id" [viewerRole]="v.viewerRole" (changed)="onMembersChanged()" />
   }
 
-  <section class="posts" aria-labelledby="posts-title">
-    <h2 id="posts-title" class="section-title">Публикации</h2>
-    <app-state-panel kind="empty" title="Публикаций пока нет" message="Лента сообщества появится, когда подключится API публикаций." />
-  </section>
+  @if (!v.restricted) {
+    <section class="posts" aria-labelledby="posts-title">
+      <h2 id="posts-title" class="section-title">Публикации</h2>
+      <app-post-list [loader]="loadGroupPosts" [listKey]="v.id" emptyMessage="В этом сообществе пока нет публикаций." />
+    </section>
+  }
 }

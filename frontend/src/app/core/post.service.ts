@@ -32,8 +32,14 @@ export interface PostSummaryPublic {
   id: string;
   body: string | null;
   authorId: string;
+  authorUsername: string;
+  authorDisplayName: string;
+  authorAvatarMediaId: string | null;
   groupId: string | null;
+  mediaIds: string[];
+  hashtags: string[];
   publishedAt: string;
+  updatedAt: string;
 }
 
 export interface PostRef {
@@ -79,7 +85,27 @@ export class PostService {
 
   drafts(cursor: string | null): Promise<CursorPage<PostSummary>> {
     return lastValueFrom(
-      this.http.get<CursorPage<PostSummary>>('/api/v1/me/post-drafts', { params: cursor ? { cursor, limit: '20' } : { limit: '20' } }),
+      this.http.get<CursorPage<PostSummary>>('/api/v1/me/post-drafts', { params: this.pageParams(cursor) }),
     );
+  }
+
+  feed(cursor: string | null): Promise<CursorPage<PostSummaryPublic>> {
+    return lastValueFrom(this.http.get<CursorPage<PostSummaryPublic>>('/api/v1/feed', { params: this.pageParams(cursor) }));
+  }
+
+  profilePosts(authorId: string, cursor: string | null): Promise<CursorPage<PostSummaryPublic>> {
+    return lastValueFrom(
+      this.http.get<CursorPage<PostSummaryPublic>>(`/api/v1/users/${authorId}/posts`, { params: this.pageParams(cursor) }),
+    );
+  }
+
+  groupPosts(groupId: string, cursor: string | null): Promise<CursorPage<PostSummaryPublic>> {
+    return lastValueFrom(
+      this.http.get<CursorPage<PostSummaryPublic>>(`/api/v1/groups/${groupId}/posts`, { params: this.pageParams(cursor) }),
+    );
+  }
+
+  private pageParams(cursor: string | null): Record<string, string> {
+    return cursor ? { cursor, limit: '20' } : { limit: '20' };
   }
 }

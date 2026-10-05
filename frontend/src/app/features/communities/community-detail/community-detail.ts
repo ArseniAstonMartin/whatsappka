@@ -3,6 +3,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CommunityService, CommunityView, CommunityVisibility } from '../../../core/community.service';
+import { CursorPage } from '../../../core/profile.service';
+import { PostService, PostSummaryPublic } from '../../../core/post.service';
 import { toProblem, ApiProblem } from '../../../core/api-error';
 import { applyServerErrors } from '../../auth/auth-form';
 import { controlErrorText } from '../../../shared/ui/messages';
@@ -17,6 +19,7 @@ import { MediaUpload, UploadedMedia } from '../../../shared/media/media-upload/m
 import { MediaView } from '../../../shared/media/media-view/media-view';
 import { Avatar } from '../../../shared/ui/avatar/avatar';
 import { CommunityMembers } from '../community-members/community-members';
+import { PostList } from '../../../shared/post-list/post-list';
 
 const ROLE_LABEL: Record<string, string> = { OWNER: 'Владелец', ADMIN: 'Администратор', MEMBER: 'Участник' };
 
@@ -26,17 +29,35 @@ const ROLE_LABEL: Record<string, string> = { OWNER: 'Владелец', ADMIN: '
  */
 @Component({
   selector: 'app-community-detail',
-  imports: [ReactiveFormsModule, AppButton, Card, Skeleton, StatePanel, TextField, MediaUpload, MediaView, Avatar, CommunityMembers],
+  imports: [
+    ReactiveFormsModule,
+    AppButton,
+    Card,
+    Skeleton,
+    StatePanel,
+    TextField,
+    MediaUpload,
+    MediaView,
+    Avatar,
+    CommunityMembers,
+    PostList,
+  ],
   templateUrl: './community-detail.html',
   styleUrl: './community-detail.scss',
 })
 export class CommunityDetail implements OnInit {
   private readonly communities = inject(CommunityService);
+  private readonly posts = inject(PostService);
   private readonly toasts = inject(ToastService);
   private readonly confirm = inject(ConfirmService);
   private readonly router = inject(Router);
 
   readonly slug = input.required<string>();
+
+  protected readonly loadGroupPosts = (cursor: string | null): Promise<CursorPage<PostSummaryPublic>> => {
+    const view = this.view();
+    return view ? this.posts.groupPosts(view.id, cursor) : Promise.resolve({ items: [], nextCursor: null, hasMore: false });
+  };
 
   protected readonly view = signal<CommunityView | null>(null);
   protected readonly loading = signal(true);

@@ -51,6 +51,6 @@
 
   <section class="posts" aria-labelledby="posts-title">
     <h2 id="posts-title" class="section-title">Публикации</h2>
-    <app-state-panel kind="empty" title="Публикаций пока нет" message="Записи появятся, когда подключится лента." />
+    <app-post-list [loader]="loadProfilePosts" [listKey]="p.id" emptyMessage="У этого пользователя пока нет опубликованных записей." />
   </section>
 }
