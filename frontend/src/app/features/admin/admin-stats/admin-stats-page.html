@@ -1,0 +1,52 @@
+<h1 class="heading">Статистика</h1>
+
+<form class="period" (ngSubmit)="show()" novalidate>
+  <label class="label" for="stats-from">С</label>
+  <input id="stats-from" class="field" type="date" [max]="to()" [value]="from()" (input)="from.set($any($event.target).value)" />
+  <label class="label" for="stats-to">По</label>
+  <input id="stats-to" class="field" type="date" [max]="maxDate" [value]="to()" (input)="to.set($any($event.target).value)" />
+  <button type="submit" appButton [busy]="loading()" [disabled]="loading()">Показать</button>
+</form>
+<p class="hint">Период в UTC, не длиннее 90 дней. Даты включаются целиком.</p>
+
+@if (loading() && !stats()) {
+  <app-skeleton width="100%" height="160px" />
+} @else if (error()) {
+  <app-state-panel kind="error" title="Статистика не загрузилась" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="show()">Повторить</button>
+  </app-state-panel>
+} @else if (stats(); as s) {
+  <section class="grid" aria-label="Показатели за период">
+    <article class="tile">
+      <span class="meta">Пользователей всего</span>
+      <strong class="value">{{ s.users }}</strong>
+    </article>
+    <article class="tile">
+      <span class="meta">DAU за {{ s.to }}</span>
+      <strong class="value">{{ s.dailyActiveUsers }}</strong>
+      <span class="meta">Уникальные пользователи, которые в этот день авторизованно обращались к сервису (UTC).</span>
+    </article>
+    <article class="tile">
+      <span class="meta">Постов опубликовано</span>
+      <strong class="value">{{ s.postsPublished }}</strong>
+    </article>
+    <article class="tile">
+      <span class="meta">Сообщений отправлено</span>
+      <strong class="value">{{ s.messagesSent }}</strong>
+    </article>
+    <article class="tile">
+      <span class="meta">Групп</span>
+      <strong class="value">{{ s.groups }}</strong>
+    </article>
+    <article class="tile">
+      <span class="meta">Открытых жалоб</span>
+      <strong class="value">{{ s.openReports }}</strong>
+      <span class="meta">Открытые и на рассмотрении</span>
+    </article>
+    <article class="tile">
+      <span class="meta">Объём медиа</span>
+      <strong class="value">{{ mib(s.mediaBytes) }} МиБ</strong>
+      <span class="meta">Оригиналы и варианты живых файлов</span>
+    </article>
+  </section>
+}

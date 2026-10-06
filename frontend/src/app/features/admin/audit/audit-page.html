@@ -1,0 +1,64 @@
+<h1 class="heading">Журнал аудита</h1>
+<p class="hint">
+  Только чтение: записи нельзя изменить или удалить. @if (!isAdmin()) { Вы видите только свои разрешённые решения. }
+</p>
+
+<div class="filters">
+  <label class="label" for="audit-action">Действие</label>
+  <select id="audit-action" class="field" (change)="action.set($any($event.target).value || null); apply()">
+    <option value="">Все действия</option>
+    @for (a of actions(); track a) {
+      <option [value]="a" [selected]="action() === a">{{ label(a) }}</option>
+    }
+  </select>
+
+  @if (isAdmin()) {
+    <label class="label" for="audit-target">Тип объекта</label>
+    <select id="audit-target" class="field" (change)="targetType.set($any($event.target).value || null); apply()">
+      <option value="">Все объекты</option>
+      @for (t of targetTypes; track t) {
+        <option [value]="t" [selected]="targetType() === t">{{ t }}</option>
+      }
+    </select>
+  }
+</div>
+
+@if (loading()) {
+  <app-skeleton width="100%" height="160px" />
+} @else if (error()) {
+  <app-state-panel kind="error" title="Журнал не загрузился" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="load(true)">Повторить</button>
+  </app-state-panel>
+} @else if (items().length === 0) {
+  <app-state-panel kind="empty" title="Записей нет" message="По выбранным условиям ничего не найдено." />
+} @else {
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Когда</th>
+          <th scope="col">Кто</th>
+          <th scope="col">Действие</th>
+          <th scope="col">Объект</th>
+          <th scope="col">Причина</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (e of items(); track e.id) {
+          <tr>
+            <td><time [attr.datetime]="e.occurredAt">{{ e.occurredAt | date: 'd MMM yyyy, HH:mm' }}</time></td>
+            <td>{{ e.actor }}</td>
+            <td>{{ label(e.action) }}</td>
+            <td>{{ e.targetType }}@if (e.targetId) { <span class="meta"> · {{ e.targetId.slice(0, 8) }}</span> }</td>
+            <td>{{ e.reason ?? '—' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  @if (hasMore()) {
+    <div class="more">
+      <button type="button" appButton variant="secondary" [busy]="loadingMore()" (click)="load(false)">Загрузить ещё</button>
+    </div>
+  }
+}

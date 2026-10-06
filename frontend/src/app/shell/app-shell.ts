@@ -27,6 +27,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { path: 'manage', label: 'Управление', icon: 'shield', primary: false, roles: ['MODERATOR', 'ADMIN'] },
   { path: 'admin/users', label: 'Пользователи', icon: 'user', primary: false, roles: ['ADMIN'] },
   { path: 'admin/settings', label: 'Настройки приложения', icon: 'user', primary: false, roles: ['ADMIN'] },
+  { path: 'admin/stats', label: 'Статистика', icon: 'user', primary: false, roles: ['ADMIN'] },
+  { path: 'audit', label: 'Журнал аудита', icon: 'user', primary: false, roles: ['MODERATOR', 'ADMIN'] },
 ];
 
 @Component({

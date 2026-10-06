@@ -126,6 +126,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/admin-users/admin-users-page').then((m) => m.AdminUsersPage),
       },
       {
+        path: 'admin/stats',
+        title: 'Статистика',
+        canActivate: [requireRoles('ADMIN')],
+        loadComponent: () => import('./features/admin/admin-stats/admin-stats-page').then((m) => m.AdminStatsPage),
+      },
+      {
+        path: 'audit',
+        title: 'Журнал аудита',
+        canActivate: [requireRoles('MODERATOR', 'ADMIN')],
+        loadComponent: () => import('./features/admin/audit/audit-page').then((m) => m.AuditPage),
+      },
+      {
         path: 'admin/settings',
         title: 'Настройки приложения',
         canActivate: [requireRoles('ADMIN')],
