@@ -54,6 +54,11 @@ export class CommunityDetail implements OnInit {
   private readonly confirm = inject(ConfirmService);
   private readonly router = inject(Router);
 
+  /** Запись сразу в этом сообществе: редактор берёт groupId из адреса. */
+  protected writePost(groupId: string): void {
+    void this.router.navigate(['/posts/new'], { queryParams: { groupId } });
+  }
+
   readonly slug = input.required<string>();
 
   protected readonly loadGroupPosts = (cursor: string | null): Promise<CursorPage<PostSummaryPublic>> => {

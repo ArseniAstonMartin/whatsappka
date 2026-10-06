@@ -73,7 +73,7 @@ export const routes: Routes = [
       },
       {
         path: 'groups',
-        title: 'Группы',
+        title: 'Сообщества',
         loadComponent: () => import('./features/communities/community-catalog/community-catalog').then((m) => m.CommunityCatalog),
       },
       {

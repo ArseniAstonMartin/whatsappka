@@ -14,7 +14,7 @@ export type SearchTab = 'people' | 'posts' | 'groups' | 'tags';
 const TABS: readonly { id: SearchTab; label: string }[] = [
   { id: 'people', label: 'Люди' },
   { id: 'posts', label: 'Посты' },
-  { id: 'groups', label: 'Группы' },
+  { id: 'groups', label: 'Сообщества' },
   { id: 'tags', label: 'Хештеги' },
 ];
 

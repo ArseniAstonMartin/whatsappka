@@ -21,7 +21,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { path: 'feed', label: 'Лента', icon: 'home', primary: true },
   { path: 'posts/new', label: 'Новая запись', icon: 'plus', primary: true },
   { path: 'search', label: 'Поиск', icon: 'search', primary: true },
-  { path: 'groups', label: 'Группы', icon: 'users', primary: true },
+  { path: 'groups', label: 'Сообщества', icon: 'users', primary: true },
   { path: 'chats', label: 'Сообщения', icon: 'chat', primary: true },
   { path: 'profile', label: 'Профиль', icon: 'user', primary: true },
   { path: 'settings', label: 'Настройки', icon: 'settings', primary: false },

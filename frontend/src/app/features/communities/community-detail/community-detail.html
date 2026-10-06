@@ -65,6 +65,12 @@
     </div>
   }
 
+  @if (v.viewerRole !== null) {
+    <div class="actions">
+      <button type="button" appButton (click)="writePost(v.id)">Написать запись в сообществе</button>
+    </div>
+  }
+
   @if (v.viewerRole !== 'OWNER') {
     <div class="actions">
       <app-report-button targetKind="GROUP" [targetId]="v.id" />

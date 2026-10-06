@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { PostService, PostView } from '../../../core/post.service';
 import { CommentService, CommentView } from '../../../core/comment.service';
@@ -27,6 +27,7 @@ import { CommentItem, CommentNode, buildCommentTree } from '../comment-item/comm
 @Component({
   selector: 'app-post-detail',
   imports: [
+    FormsModule,
     ReactiveFormsModule,
     DatePipe,
     RouterLink,

@@ -1,5 +1,5 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { CommentService, CommentView } from '../../../core/comment.service';
@@ -52,7 +52,7 @@ export function buildCommentTree(flat: CommentView[]): CommentNode[] {
  */
 @Component({
   selector: 'app-comment-item',
-  imports: [ReactiveFormsModule, DatePipe, RouterLink, AppButton, Avatar, MediaView, TextField, ReactionBar, CommentItem, ReportButton],
+  imports: [FormsModule, ReactiveFormsModule, DatePipe, RouterLink, AppButton, Avatar, MediaView, TextField, ReactionBar, CommentItem, ReportButton],
   templateUrl: './comment-item.html',
   styleUrl: './comment-item.scss',
 })
