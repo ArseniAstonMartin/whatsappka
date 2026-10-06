@@ -155,7 +155,8 @@ public class ReactionService {
     /** Та же видимость, что и у обсуждения (FR-05): удалён/не опубликован — не найдено, группа требует членства. */
     private UUID requireViewablePost(UUID postId, UUID viewerId) {
         List<PostRow> rows = jdbc.query(
-                "SELECT author_id, group_id, status FROM posts WHERE id = ? AND deleted_at IS NULL",
+                "SELECT author_id, group_id, status FROM posts WHERE id = ? AND deleted_at IS NULL "
+                        + "AND author_id IN (SELECT id FROM users WHERE status = 'ACTIVE')",
                 (rs, n) -> new PostRow(
                         UUID.fromString(rs.getString("author_id")),
                         rs.getObject("group_id") == null ? null : UUID.fromString(rs.getString("group_id")),
@@ -177,7 +178,8 @@ public class ReactionService {
     /** Реакция недоступна на заглушку удалённого комментария; видимость наследуется от поста. */
     private UUID requireViewableComment(UUID commentId, UUID viewerId) {
         List<CommentRow> rows = jdbc.query(
-                "SELECT post_id, author_id FROM comments WHERE id = ? AND deleted_at IS NULL",
+                "SELECT post_id, author_id FROM comments WHERE id = ? AND deleted_at IS NULL "
+                        + "AND author_id IN (SELECT id FROM users WHERE status = 'ACTIVE')",
                 (rs, n) -> new CommentRow(
                         UUID.fromString(rs.getString("post_id")), UUID.fromString(rs.getString("author_id"))),
                 commentId);

@@ -167,7 +167,8 @@ public class CommentService {
     /** Видимость обсуждения совпадает с публикацией: удалена/не опубликована — не найдено; группа требует членства. */
     private PostRow requireViewablePost(UUID postId, UUID viewerId) {
         List<PostRow> rows = jdbc.query(
-                "SELECT author_id, group_id, status FROM posts WHERE id = ? AND deleted_at IS NULL",
+                "SELECT author_id, group_id, status FROM posts WHERE id = ? AND deleted_at IS NULL "
+                        + "AND author_id IN (SELECT id FROM users WHERE status = 'ACTIVE')",
                 (rs, n) -> new PostRow(
                         UUID.fromString(rs.getString("author_id")),
                         rs.getObject("group_id") == null ? null : UUID.fromString(rs.getString("group_id")),
@@ -189,7 +190,8 @@ public class CommentService {
     /** Родитель может быть удалённым (заглушка не обрывает ветку) — проверяется лишь принадлежность посту. */
     private ParentInfo requireParent(UUID postId, UUID parentId) {
         List<ParentInfo> rows = jdbc.query(
-                "SELECT id, parent_id, author_id, depth FROM comments WHERE id = ? AND post_id = ?",
+                "SELECT id, parent_id, author_id, depth FROM comments WHERE id = ? AND post_id = ? "
+                        + "AND author_id IN (SELECT id FROM users WHERE status = 'ACTIVE')",
                 (rs, n) -> new ParentInfo(
                         UUID.fromString(rs.getString("id")),
                         rs.getObject("parent_id") == null ? null : UUID.fromString(rs.getString("parent_id")),
@@ -207,7 +209,8 @@ public class CommentService {
             return List.of();
         }
         String placeholders = String.join(",", parentIds.stream().map(id -> "?").toList());
-        String sql = SELECT_BASE + "WHERE c.hidden_at IS NULL AND c.parent_id IN (" + placeholders + ") ORDER BY c.created_at, c.id";
+        String sql = SELECT_BASE + "WHERE c.hidden_at IS NULL AND c.author_id IN (SELECT id FROM users WHERE status = 'ACTIVE') "
+                + "AND c.parent_id IN (" + placeholders + ") ORDER BY c.created_at, c.id";
         return jdbc.query(sql, ROW_MAPPER, parentIds.toArray());
     }
 
@@ -249,6 +252,7 @@ public class CommentService {
 
     private static String rootSql(boolean hasCursor) {
         return SELECT_BASE + "WHERE c.hidden_at IS NULL AND c.post_id = ? AND c.parent_id IS NULL "
+                + "AND c.author_id IN (SELECT id FROM users WHERE status = 'ACTIVE') "
                 + (hasCursor ? "AND (c.created_at, c.id) > (?, ?) " : "")
                 + "ORDER BY c.created_at, c.id LIMIT ?";
     }
