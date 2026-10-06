@@ -3,6 +3,7 @@ package by.whatsappka.media;
 import by.whatsappka.media.storage.ObjectStorage;
 import by.whatsappka.media.storage.StorageException;
 import by.whatsappka.platform.web.ApiException;
+import by.whatsappka.settings.AppSettingsService;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,11 +27,13 @@ public class MediaUploadService {
     private final ObjectStorage storage;
     private final MediaQuota quota;
     private final MediaRecorder recorder;
+    private final AppSettingsService settings;
 
-    public MediaUploadService(ObjectStorage storage, MediaQuota quota, MediaRecorder recorder) {
+    public MediaUploadService(ObjectStorage storage, MediaQuota quota, MediaRecorder recorder, AppSettingsService settings) {
         this.storage = storage;
         this.quota = quota;
         this.recorder = recorder;
+        this.settings = settings;
     }
 
     public MediaAsset upload(
@@ -44,7 +47,7 @@ public class MediaUploadService {
         if (declaredSize <= 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "bad_request", "Пустой файл не принимается", List.of(), null);
         }
-        if (declaredSize > purpose.maxBytes()) {
+        if (declaredSize > settings.effectiveUploadLimit(purpose)) {
             throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "file_too_large",
                     "Файл больше допустимого для этого назначения", List.of(), null);
         }

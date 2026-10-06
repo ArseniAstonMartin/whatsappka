@@ -58,7 +58,7 @@ public class BootstrapAdminService {
             return false;
         }
 
-        UserAccount admin = registration.register(properties.email(), properties.username(), properties.password());
+        UserAccount admin = registration.registerBootstrap(properties.email(), properties.username(), properties.password());
         roles.save(new UserRoleGrant(new UserRoleId(admin.id(), "ADMIN"), clock.instant()));
         audit.record(null, "BOOTSTRAP_ADMIN_CREATED", "user", admin.id(), "Первый администратор из окружения",
                 TraceIds.resolveIncoming(null));

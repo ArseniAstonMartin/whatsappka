@@ -10,6 +10,7 @@ import by.whatsappka.identity.account.UserRoleRepository;
 import by.whatsappka.identity.recovery.EmailConfirmationService;
 import by.whatsappka.platform.web.ApiException;
 import by.whatsappka.platform.web.FieldErrorDetail;
+import by.whatsappka.settings.AppSettingsService;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.Clock;
@@ -37,6 +38,7 @@ public class RegistrationService {
     private final UserRoleRepository roles;
     private final PasswordEncoder passwordEncoder;
     private final EmailConfirmationService emailConfirmation;
+    private final AppSettingsService settings;
     private final Clock clock;
 
     public RegistrationService(
@@ -45,6 +47,7 @@ public class RegistrationService {
             UserRoleRepository roles,
             PasswordEncoder passwordEncoder,
             EmailConfirmationService emailConfirmation,
+            AppSettingsService settings,
             Clock clock
     ) {
         this.users = users;
@@ -52,11 +55,26 @@ public class RegistrationService {
         this.roles = roles;
         this.passwordEncoder = passwordEncoder;
         this.emailConfirmation = emailConfirmation;
+        this.settings = settings;
         this.clock = clock;
     }
 
     @Transactional
     public UserAccount register(String email, String username, String password) {
+        settings.requireRegistrationOpen();
+        return registerWithPassword(email, username, password);
+    }
+
+    /**
+     * Первый администратор из окружения. Закрытая регистрация его не останавливает: иначе при закрытом
+     * значении оператор не смог бы восстановить доступ после потери всех администраторов.
+     */
+    @Transactional
+    UserAccount registerBootstrap(String email, String username, String password) {
+        return registerWithPassword(email, username, password);
+    }
+
+    private UserAccount registerWithPassword(String email, String username, String password) {
         if (password.getBytes(StandardCharsets.UTF_8).length > PASSWORD_MAX_BYTES) {
             throw ApiException.validation(
                     "Проверьте поля запроса",
@@ -75,6 +93,7 @@ public class RegistrationService {
      */
     @Transactional
     public UserAccount registerExternal(String email, String preferredUsername) {
+        settings.requireRegistrationOpen();
         return create(normalizeEmail(email), uniqueUsername(preferredUsername), null, clock.instant());
     }
 

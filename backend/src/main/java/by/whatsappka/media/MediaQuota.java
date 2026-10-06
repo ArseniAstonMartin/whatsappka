@@ -1,6 +1,7 @@
 package by.whatsappka.media;
 
 import by.whatsappka.platform.web.ApiException;
+import by.whatsappka.settings.AppSettingsService;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
@@ -41,12 +42,14 @@ public class MediaQuota {
     private final JdbcTemplate jdbc;
     private final MediaLimits limits;
     private final DiskSpaceGuard disk;
+    private final AppSettingsService settings;
     private final Clock clock;
 
-    public MediaQuota(JdbcTemplate jdbc, MediaLimits limits, DiskSpaceGuard disk, Clock clock) {
+    public MediaQuota(JdbcTemplate jdbc, MediaLimits limits, DiskSpaceGuard disk, AppSettingsService settings, Clock clock) {
         this.jdbc = jdbc;
         this.limits = limits;
         this.disk = disk;
+        this.settings = settings;
         this.clock = clock;
     }
 
@@ -56,7 +59,7 @@ public class MediaQuota {
         Instant now = clock.instant();
         Timestamp nowTs = Timestamp.from(now);
         long usedByOwner = jdbc.queryForObject(USED_BY_OWNER, Long.class, ownerId, ownerId, ownerId, nowTs);
-        if (usedByOwner + bytes > limits.userQuotaBytes()) {
+        if (usedByOwner + bytes > settings.effectiveUserQuota()) {
             throw new ApiException(HttpStatus.PAYLOAD_TOO_LARGE, "quota_exceeded",
                     "Превышена квота медиа", java.util.List.of(), null);
         }
