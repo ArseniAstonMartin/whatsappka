@@ -168,14 +168,31 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: var(--space-2);
     padding: var(--space-3) var(--space-4);
     background: var(--color-surface);
     border-bottom: 1px solid var(--color-border);
   }
 
+  /* Иконки прокручиваются внутри панели, а не расталкивают страницу вбок: у администратора их больше, чем помещается на телефоне. */
+  .top-bar nav {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    /* Отступ оставляет место для фокусной обводки, иначе её срежет overflow. */
+    padding: var(--space-1) 0;
+    scrollbar-width: none;
+  }
+
+  .top-bar .brand,
+  .top-bar .logout-mobile {
+    flex-shrink: 0;
+  }
+
   .top-links {
     display: flex;
     gap: var(--space-2);
+    width: max-content;
   }
 
   .icon-link {
