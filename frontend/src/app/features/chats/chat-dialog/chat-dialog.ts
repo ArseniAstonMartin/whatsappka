@@ -17,7 +17,7 @@ import { RouterLink } from '@angular/router';
 import { FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ChatMessage, ChatService, Conversation, ReadStatus } from '../../../core/chat.service';
 import { mergeMessages } from '../../../core/message-sync';
-import { GroupChatMember, GroupChatRole, GroupChatService } from '../../../core/group-chat.service';
+import { GroupChatInvitation, GroupChatMember, GroupChatRole, GroupChatService } from '../../../core/group-chat.service';
 import { ProfileService } from '../../../core/profile.service';
 import { RealtimeEvent, RealtimeService } from '../../../core/realtime/realtime.service';
 import { toProblem, messageForCode } from '../../../core/api-error';
@@ -165,6 +165,9 @@ export class ChatDialog {
   protected readonly loading = signal(true);
   protected readonly loadingOlder = signal(false);
   protected readonly notFound = signal(false);
+  /** Приглашение в этот чат: если диалог закрыт для нас, но мы приглашены, предлагаем вступить. */
+  protected readonly pendingInvitation = signal<GroupChatInvitation | null>(null);
+  protected readonly acceptingInvitation = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly syncWarning = signal<string | null>(null);
 
@@ -314,6 +317,7 @@ export class ChatDialog {
     this.syncTimer = null;
     this.loading.set(true);
     this.notFound.set(false);
+    this.pendingInvitation.set(null);
     this.error.set(null);
     this.syncWarning.set(null);
     this.messages.set([]);
@@ -862,6 +866,34 @@ export class ChatDialog {
     return !this.destroyed && token === this.loadToken && conversationId === this.id();
   }
 
+  private async loadInvitation(conversationId: string): Promise<void> {
+    try {
+      const invitations = await this.groupChats.myInvitations();
+      if (!this.destroyed && conversationId === this.id() && this.notFound()) {
+        this.pendingInvitation.set(invitations.find((i) => i.conversationId === conversationId) ?? null);
+      }
+    } catch {
+      this.pendingInvitation.set(null);
+    }
+  }
+
+  protected async acceptPendingInvitation(): Promise<void> {
+    const invitation = this.pendingInvitation();
+    if (!invitation || this.acceptingInvitation()) {
+      return;
+    }
+    this.acceptingInvitation.set(true);
+    try {
+      await this.groupChats.acceptInvitation(invitation.id);
+      this.toasts.show(`Вы вступили в «${invitation.conversationTitle}»`, 'success');
+      await this.start(invitation.conversationId);
+    } catch (error) {
+      this.toasts.show(toProblem(error).message, 'error');
+    } finally {
+      this.acceptingInvitation.set(false);
+    }
+  }
+
   private revokeAccess(): void {
     ++this.loadToken;
     ++this.historyRevision;
@@ -870,6 +902,7 @@ export class ChatDialog {
     this.syncRun = null;
     this.syncRequested = false;
     this.notFound.set(true);
+    void this.loadInvitation(this.id());
     this.loading.set(false);
     this.loadingOlder.set(false);
     this.messages.set([]);

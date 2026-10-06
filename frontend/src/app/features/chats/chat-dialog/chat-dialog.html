@@ -5,7 +5,15 @@
     <app-skeleton width="60%" height="48px" />
   </div>
 } @else if (notFound()) {
-  <app-state-panel kind="not-found" title="Диалог недоступен" message="Чат не найден или вы больше не участник." />
+  @if (pendingInvitation(); as invitation) {
+    <app-state-panel kind="empty" title="Вас пригласили в чат" [message]="'«' + invitation.conversationTitle + '». Вступите, чтобы читать переписку и писать в него.'">
+      <button type="button" appButton [busy]="acceptingInvitation()" [disabled]="acceptingInvitation()" (click)="acceptPendingInvitation()">
+        Вступить в чат
+      </button>
+    </app-state-panel>
+  } @else {
+    <app-state-panel kind="not-found" title="Диалог недоступен" message="Чат не найден или вы больше не участник." />
+  }
 } @else if (error()) {
   <app-state-panel kind="error" title="Не удалось открыть диалог" [message]="error()!">
     <button type="button" appButton variant="secondary" (click)="start(id())">Повторить</button>
