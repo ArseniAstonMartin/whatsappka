@@ -77,13 +77,14 @@ public class ConversationQueries {
         this.jdbc = jdbc;
     }
 
+    /** Запрос объединяет личные и групповые диалоги: зритель передаётся в каждую ветку отдельно. */
     @Transactional(readOnly = true)
     public CursorPage<ConversationView> list(UUID viewerId, String cursor, int limit) {
         int size = PageSize.limit(limit);
         Keyset key = decode(cursor);
         List<ConversationView> rows = key == null
-                ? jdbc.query(ConversationSql.LIST_FIRST, ROW, viewerId, size + 1)
-                : jdbc.query(ConversationSql.LIST_AFTER, ROW, viewerId,
+                ? jdbc.query(ConversationSql.LIST_FIRST, ROW, viewerId, viewerId, size + 1)
+                : jdbc.query(ConversationSql.LIST_AFTER, ROW, viewerId, viewerId,
                         Timestamp.from(key.at()), key.id(), size + 1);
         boolean more = rows.size() > size;
         List<ConversationView> shown = new ArrayList<>(more ? rows.subList(0, size) : rows);
@@ -97,7 +98,7 @@ public class ConversationQueries {
 
     @Transactional(readOnly = true)
     public ConversationView get(UUID viewerId, UUID conversationId) {
-        List<ConversationView> found = jdbc.query(ConversationSql.GET_FOR_MEMBER, ROW, viewerId, conversationId);
+        List<ConversationView> found = jdbc.query(ConversationSql.GET_FOR_MEMBER, ROW, viewerId, viewerId, conversationId);
         if (found.isEmpty()) {
             throw ApiException.notFound();
         }

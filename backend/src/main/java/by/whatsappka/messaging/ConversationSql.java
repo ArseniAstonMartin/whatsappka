@@ -94,7 +94,7 @@ final class ConversationSql {
             WHERE m.user_id = ? AND m.left_at IS NULL
             """;
 
-    private static final String UNIONED = "SELECT * FROM ((" + DIRECT_COLUMNS + ") UNION ALL (" + GROUP_COLUMNS + ")) conv";
+    private static final String UNIONED = "SELECT * FROM ((" + DIRECT_COLUMNS + ") UNION ALL (" + GROUP_COLUMNS + ")) conv ";
 
     static final String LIST_FIRST = UNIONED + """
             ORDER BY updated_at DESC, id DESC
