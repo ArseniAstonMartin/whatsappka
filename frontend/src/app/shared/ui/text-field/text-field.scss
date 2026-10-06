@@ -46,3 +46,21 @@
   resize: vertical;
   line-height: var(--line-height-body);
 }
+
+/* Растёт по содержимому до 8 строк, дальше прокручивается. field-sizing поддерживается в Chromium; в остальных браузерах поле остаётся фиксированным. */
+.textarea.grow {
+  min-height: 2lh;
+  resize: none;
+  field-sizing: content;
+  max-height: 8lh;
+  overflow-y: auto;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

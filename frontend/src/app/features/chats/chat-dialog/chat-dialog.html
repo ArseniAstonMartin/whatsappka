@@ -175,7 +175,7 @@
         </div>
       }
       <form class="compose-form" (ngSubmit)="send()" novalidate>
-        <app-text-field [formControl]="textControl" label="Сообщение" [multiline]="true" [maxLength]="4000" />
+        <app-text-field [formControl]="textControl" label="Сообщение" [multiline]="true" [rows]="2" [autoGrow]="true" [hideLabel]="true" [maxLength]="4000" />
         <div class="compose-actions">
           <button type="button" appButton variant="ghost" [disabled]="!canAddAttachment()" (click)="addSlot('CHAT_IMAGE')">
             Фото

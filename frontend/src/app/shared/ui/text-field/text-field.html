@@ -1,9 +1,10 @@
-<label class="label" [attr.for]="inputId">{{ label() }}</label>
+<label class="label" [class.visually-hidden]="hideLabel()" [attr.for]="inputId">{{ label() }}</label>
 @if (multiline()) {
   <textarea
     class="input textarea"
+    [class.grow]="autoGrow()"
     [id]="inputId"
-    rows="4"
+    [attr.rows]="rows()"
     [attr.maxlength]="maxLength()"
     [value]="value()"
     [disabled]="disabled()"

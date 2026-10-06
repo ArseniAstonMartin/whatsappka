@@ -17,6 +17,12 @@ export class TextField implements ControlValueAccessor {
   readonly hint = input<string>('');
   /** Многострочное поле для описания; по умолчанию однострочное. */
   readonly multiline = input<boolean>(false);
+  /** Число строк у многострочного поля при старте. */
+  readonly rows = input<number>(4);
+  /** Поле растёт вместе с текстом до предела высоты (как в мессенджерах). */
+  readonly autoGrow = input<boolean>(false);
+  /** Подпись скрыта визуально, но остаётся для screen reader. */
+  readonly hideLabel = input<boolean>(false);
   readonly maxLength = input<number | null>(null);
   readonly errorText = input<string | null>(null);
 
