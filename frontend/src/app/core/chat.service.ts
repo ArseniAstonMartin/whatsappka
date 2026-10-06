@@ -119,6 +119,13 @@ export class ChatService {
     return lastValueFrom(this.http.get<ChatEventsPage>(`/api/v1/conversations/${conversationId}/events`, { params }).pipe(timeout(10000)));
   }
 
+  /** Участники диалога, которые сейчас в сети (сигнал живого соединения, см. OnlineStatus на бэкенде). */
+  presence(conversationId: string): Promise<{ online: string[] }> {
+    return lastValueFrom(
+      this.http.get<{ online: string[] }>(`/api/v1/conversations/${conversationId}/presence`).pipe(timeout(10000)),
+    );
+  }
+
   readStatus(conversationId: string, messageId: string): Promise<ReadStatus> {
     return lastValueFrom(
       this.http.get<ReadStatus>(`/api/v1/conversations/${conversationId}/messages/${messageId}/read-status`),

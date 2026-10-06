@@ -115,6 +115,7 @@ const TYPING_INTERVAL_MS = 2000;
 /** Статус прочтения обновляется, пока вкладка видима: сервер не присылает чужое прочтение отдельным событием. */
 const READ_STATUS_INTERVAL_MS = 15000;
 /** REST также страхует потерю Redis-сигналов при живом WebSocket. */
+const PRESENCE_INTERVAL_MS = 20000;
 const SYNC_POLL_INTERVAL_MS = 5000;
 /** Не больше стольких страниц журнала за один проход: остальное догонит следующий проход. */
 const EVENT_PAGES_MAX = 5;
@@ -153,6 +154,8 @@ export class ChatDialog {
   protected readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
 
   protected readonly conversation = signal<Conversation | null>(null);
+  /** Собеседник личного диалога сейчас в сети. */
+  protected readonly online = signal(false);
   protected readonly members = signal<GroupChatMember[]>([]);
   protected readonly messages = signal<ChatMessage[]>([]);
   protected readonly pending = signal<PendingMessage[]>([]);
@@ -266,6 +269,13 @@ export class ChatDialog {
       .subscribe(() => {
         void this.syncEvents();
       });
+    interval(PRESENCE_INTERVAL_MS)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        if (document.visibilityState === 'visible') {
+          void this.refreshPresence();
+        }
+      });
     interval(READ_STATUS_INTERVAL_MS)
       .pipe(takeUntilDestroyed())
       .subscribe(() => {
@@ -279,6 +289,20 @@ export class ChatDialog {
       this.clearTyping();
       if (this.syncTimer !== null) clearTimeout(this.syncTimer);
     });
+  }
+
+  private async refreshPresence(): Promise<void> {
+    const chat = this.conversation();
+    if (!chat || chat.type !== 'DIRECT' || !chat.otherId) {
+      return;
+    }
+    try {
+      const presence = await this.chats.presence(chat.id);
+      this.online.set(presence.online.includes(chat.otherId));
+    } catch {
+      // Индикатор присутствия не обязателен: при ошибке просто не показываем «в сети».
+      this.online.set(false);
+    }
   }
 
   protected async start(conversationId: string): Promise<void> {
@@ -301,6 +325,7 @@ export class ChatDialog {
     }
     this.openedId = conversationId;
     this.conversation.set(null);
+    this.online.set(false);
     this.members.set([]);
     this.loadingOlder.set(false);
     this.editingId.set(null);
@@ -328,6 +353,7 @@ export class ChatDialog {
         this.selfId.set(own.id);
       }
       this.conversation.set(conversation);
+      void this.refreshPresence();
       this.messages.set(oldestFirst(page.items));
       this.nextCursor.set(page.nextCursor);
       this.hasMore.set(page.hasMore);
@@ -849,6 +875,7 @@ export class ChatDialog {
     this.pending.set([]);
     this.members.set([]);
     this.conversation.set(null);
+    this.online.set(false);
     this.readStatus.set(null);
     this.editingId.set(null);
     this.reasonPromptId.set(null);
@@ -875,6 +902,7 @@ export class ChatDialog {
       const conversation = await this.chats.get(conversationId);
       if (!this.isCurrent(conversationId, token)) return;
       this.conversation.set(conversation);
+      void this.refreshPresence();
       for (let page = 0; page < EVENT_PAGES_MAX; page++) {
         const events = await this.chats.events(conversationId, this.eventCursor!);
         if (!this.isCurrent(conversationId, token)) return;

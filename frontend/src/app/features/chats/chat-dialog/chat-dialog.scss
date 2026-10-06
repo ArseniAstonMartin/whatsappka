@@ -1,8 +1,10 @@
 :host {
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
-  min-height: 60vh;
+  /* Растёт на всю высоту правой колонки (см. .dialog-pane в chats-layout). */
+  flex: 1;
+  min-height: 0;
   min-width: 0;
 }
 
@@ -64,8 +66,9 @@
 }
 
 .scroller {
+  flex: 1 1 auto;
   overflow-y: auto;
-  max-height: 65vh;
+  min-height: 0;
   padding: var(--space-2);
   border-radius: var(--radius-card);
   background: var(--color-surface);
@@ -88,7 +91,7 @@
 .msg {
   position: relative;
   justify-self: start;
-  max-width: min(80%, 560px);
+  max-width: min(75%, 640px);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-control);
   background: var(--color-surface-muted);
@@ -96,10 +99,17 @@
   gap: var(--space-1);
 }
 
-.msg-menu {
-  position: absolute;
-  top: var(--space-1);
-  right: var(--space-1);
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.presence {
+  color: var(--color-primary);
+  font-size: 14px;
+  min-height: 1.4em;
 }
 
 .inline-form {

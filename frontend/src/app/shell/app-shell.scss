@@ -92,6 +92,11 @@
   display: none;
 }
 
+/* Раздел сообщений использует всю ширину: список и переписка рядом. */
+.main:has(app-chats-layout) {
+  max-width: none;
+}
+
 .main {
   width: 100%;
   max-width: 720px;

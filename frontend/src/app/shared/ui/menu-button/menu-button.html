@@ -1,6 +1,12 @@
-<button type="button" appButton variant="secondary" aria-haspopup="menu" [cdkMenuTriggerFor]="menu">
-  {{ label() }}
-</button>
+@if (kebab()) {
+  <button type="button" appButton variant="ghost" class="kebab" aria-haspopup="menu" [attr.aria-label]="label()" [cdkMenuTriggerFor]="menu">
+    <app-icon name="more" [size]="24" />
+  </button>
+} @else {
+  <button type="button" appButton variant="secondary" aria-haspopup="menu" [cdkMenuTriggerFor]="menu">
+    {{ label() }}
+  </button>
+}
 <ng-template #menu>
   <div class="menu" cdkMenu>
     @for (item of items(); track $index) {

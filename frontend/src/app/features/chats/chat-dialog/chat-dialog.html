@@ -21,6 +21,9 @@
       }
       <div class="who">
         <span class="name">{{ chat.title }}</span>
+        @if (typingLabel(); as label) {
+          <span class="presence">{{ label }}</span>
+        }
       </div>
       <a class="settings-link" [routerLink]="['/chats', chat.id, 'settings']" appButton variant="ghost">Настройки</a>
     } @else {
@@ -28,6 +31,13 @@
       <div class="who">
         <a class="name" [routerLink]="['/users', chat.otherUsername]">{{ chat.otherDisplayName }}</a>
         <span class="username">&#64;{{ chat.otherUsername }}</span>
+        <span class="presence">
+          @if (typingLabel(); as label) {
+            {{ label }}
+          } @else if (online()) {
+            в сети
+          }
+        </span>
       </div>
     }
   </header>
@@ -60,11 +70,6 @@
             @if (message.deleted) {
               <p class="muted">Сообщение удалено</p>
             } @else {
-              @if (menuItems(message).length > 0) {
-                <div class="msg-menu">
-                  <app-menu-button label="Действия" [items]="menuItems(message)" (selected)="onMenuAction(message, $event)" />
-                </div>
-              }
               @if (senderName(message); as name) {
                 <p class="sender">{{ name }}</p>
               }
@@ -106,12 +111,17 @@
                 </form>
               }
             }
-            <time class="time" [attr.datetime]="message.createdAt">
-              {{ time(message.createdAt) }}
-              @if (edited(message)) {
-                · изменено
+            <div class="meta">
+              <time class="time" [attr.datetime]="message.createdAt">
+                {{ time(message.createdAt) }}
+                @if (edited(message)) {
+                  · изменено
+                }
+              </time>
+              @if (menuItems(message).length > 0) {
+                <app-menu-button label="Действия с сообщением" [kebab]="true" [items]="menuItems(message)" (selected)="onMenuAction(message, $event)" />
               }
-            </time>
+            </div>
             @if (message.id === lastOwnId()) {
               @if (readLabel(); as label) {
                 <p class="read-status">{{ label }}</p>
@@ -152,9 +162,6 @@
 
   @if (!chat.blocked) {
     <div class="composer">
-      @if (typingLabel(); as label) {
-        <p class="typing">{{ label }}</p>
-      }
       @if (attachSlots().length > 0) {
         <div class="slots">
           @for (slot of attachSlots(); track slot.slotId) {

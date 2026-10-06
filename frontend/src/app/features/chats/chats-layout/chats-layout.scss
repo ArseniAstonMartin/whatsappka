@@ -6,12 +6,27 @@
   display: grid;
   grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
   gap: var(--space-4);
-  min-height: 60vh;
+  /* Чат занимает всю высоту окна под шапкой; высота не зависит от длины переписки. */
+  height: calc(100dvh - 190px);
+  min-height: 480px;
 }
 
 .pane {
   min-width: 0;
+  min-height: 0;
 }
+
+/* Открытый диалог заполняет правую колонку по высоте: лента сообщений растёт, композер прижат к низу. */
+.dialog-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+/* router-outlet — пустой маркер: без display: contents он занимал бы место над диалогом. */
+.dialog-pane > router-outlet {
+  display: contents;
+}
+
 
 @media (max-width: 759px) {
   .chats {
