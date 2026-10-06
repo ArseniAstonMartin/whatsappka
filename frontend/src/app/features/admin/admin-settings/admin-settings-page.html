@@ -1,0 +1,78 @@
+<h1 class="heading">Настройки приложения</h1>
+<p class="hint">Меняются только перечисленные параметры. Ключей доступа, секретов и токенов здесь нет.</p>
+
+@if (loading()) {
+  <app-skeleton width="100%" height="200px" />
+} @else if (error()) {
+  <app-state-panel kind="error" title="Настройки не загрузились" [message]="error()!">
+    <button type="button" appButton variant="secondary" (click)="load()">Повторить</button>
+  </app-state-panel>
+} @else {
+  <form class="form" (ngSubmit)="save()" novalidate>
+    <fieldset class="field-group">
+      <legend class="section-title">Регистрация</legend>
+      <label class="check">
+        <input type="checkbox" [checked]="draft().registrationOpen" (change)="patch({ registrationOpen: $any($event.target).checked })" />
+        <span>Открыта для новых аккаунтов</span>
+      </label>
+      <p class="hint">Закрытая регистрация не трогает вход существующих пользователей.</p>
+      @if (fieldErrors()['registration_open']; as text) {
+        <p class="error" role="alert">{{ text }}</p>
+      }
+    </fieldset>
+
+    <fieldset class="field-group">
+      <legend class="section-title">Загрузки</legend>
+      <label class="label" for="upload-mib">Лимит одной загрузки, МиБ</label>
+      <input id="upload-mib" class="field" type="number" min="1" [max]="ceilings().uploadMiB" step="1"
+             [value]="draft().uploadMiB" (input)="patch({ uploadMiB: +$any($event.target).value })" />
+      <p class="hint">Не выше {{ ceilings().uploadMiB }} МиБ: больше не позволяет техническое ограничение.</p>
+      @if (fieldErrors()['media_upload_limit_bytes']; as text) {
+        <p class="error" role="alert">{{ text }}</p>
+      }
+
+      <label class="label" for="quota-mib">Квота пользователя, МиБ</label>
+      <input id="quota-mib" class="field" type="number" min="10" [max]="ceilings().quotaMiB" step="1"
+             [value]="draft().quotaMiB" (input)="patch({ quotaMiB: +$any($event.target).value })" />
+      <p class="hint">Не выше {{ ceilings().quotaMiB }} МиБ на пользователя.</p>
+      @if (fieldErrors()['media_user_quota_bytes']; as text) {
+        <p class="error" role="alert">{{ text }}</p>
+      }
+    </fieldset>
+
+    <fieldset class="field-group">
+      <legend class="section-title">Сайт</legend>
+      <label class="label" for="site-name">Название</label>
+      <input id="site-name" class="field" type="text" maxlength="60" [value]="draft().siteName"
+             (input)="patch({ siteName: $any($event.target).value })" />
+      @if (fieldErrors()['site_name']; as text) {
+        <p class="error" role="alert">{{ text }}</p>
+      }
+    </fieldset>
+
+    <label class="label" for="settings-reason">Причина (попадает в аудит)</label>
+    <textarea id="settings-reason" class="field" rows="2" maxlength="500" [value]="reason()"
+              (input)="reason.set($any($event.target).value)"></textarea>
+
+    @if (formError()) {
+      <p class="error" role="alert">{{ formError() }}</p>
+    }
+
+    <div class="actions">
+      <button type="submit" appButton [busy]="busy()" [disabled]="busy() || changed().length === 0">
+        Сохранить{{ changed().length ? ' (' + changed().length + ')' : '' }}
+      </button>
+    </div>
+  </form>
+
+  @if (lastChanged().length) {
+    <section class="saved" aria-live="polite">
+      <h2 class="section-title">Сохранено</h2>
+      <ul>
+        @for (line of lastChanged(); track line) {
+          <li>{{ line }}</li>
+        }
+      </ul>
+    </section>
+  }
+}

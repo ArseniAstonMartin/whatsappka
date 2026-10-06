@@ -3,6 +3,12 @@
 <label class="label" for="user-search">Поиск по логину или имени</label>
 <input id="user-search" class="field search" type="search" autocomplete="off" placeholder="Логин или имя" (input)="search($any($event.target).value)" />
 
+<div class="filters" role="group" aria-label="Фильтр списка">
+  @for (f of filters; track f.value) {
+    <button type="button" appButton [variant]="filter() === f.value ? 'primary' : 'secondary'" (click)="filter.set(f.value)">{{ f.label }}</button>
+  }
+</div>
+
 <div class="layout">
   <section class="list-pane" aria-label="Пользователи">
     @if (loading()) {
@@ -14,11 +20,11 @@
       <app-state-panel kind="error" title="Список не загрузился" [message]="error()!">
         <button type="button" appButton variant="secondary" (click)="load(true)">Повторить</button>
       </app-state-panel>
-    } @else if (items().length === 0) {
-      <app-state-panel kind="empty" title="Никого не нашли" message="Попробуйте другой запрос." />
+    } @else if (visible().length === 0) {
+      <app-state-panel kind="empty" title="Никого не нашли" message="Попробуйте другой запрос или фильтр." />
     } @else {
       <ul class="list">
-        @for (u of items(); track u.id) {
+        @for (u of visible(); track u.id) {
           <li>
             <button type="button" class="row" [class.active]="selected()?.id === u.id" (click)="select(u)">
               <span class="name">{{ u.displayName }}</span>
@@ -75,6 +81,20 @@
         <button type="button" appButton variant="secondary" [disabled]="busy()" (click)="toggleVerified()">
           {{ selected()!.verified ? 'Снять верификацию' : 'Отметить как проверенный' }}
         </button>
+      </div>
+
+      <div class="sanction">
+        <h3 class="section-title">Блокировка</h3>
+        <label class="label" for="sanction-hours">Срок временной блокировки</label>
+        <select id="sanction-hours" class="field" [value]="sanctionHours()" (change)="sanctionHours.set(+$any($event.target).value)">
+          @for (o of sanctionOptions; track o.hours) {
+            <option [value]="o.hours">{{ o.label }}</option>
+          }
+        </select>
+        <div class="actions">
+          <button type="button" appButton variant="danger" [disabled]="busy()" (click)="sanctionTemporary()">Временная блокировка</button>
+          <button type="button" appButton variant="danger" [disabled]="busy()" (click)="sanctionPermanent()">Постоянная блокировка</button>
+        </div>
       </div>
 
       @if (actionError(); as text) {

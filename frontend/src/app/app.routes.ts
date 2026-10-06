@@ -126,6 +126,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/admin-users/admin-users-page').then((m) => m.AdminUsersPage),
       },
       {
+        path: 'admin/settings',
+        title: 'Настройки приложения',
+        canActivate: [requireRoles('ADMIN')],
+        loadComponent: () => import('./features/admin/admin-settings/admin-settings-page').then((m) => m.AdminSettingsPage),
+      },
+      {
         path: 'profile',
         title: 'Мой профиль',
         loadComponent: () => import('./features/profile/own-profile/own-profile').then((m) => m.OwnProfilePage),

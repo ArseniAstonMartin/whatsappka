@@ -67,6 +67,11 @@ export class AuthService {
     await this.refresh();
   }
 
+  /** Перечитывает роли с сервера: после потери роли интерфейс должен закрыть служебные разделы. */
+  refreshProfile(): Promise<void> {
+    return this.loadProfile();
+  }
+
   async login(email: string, password: string): Promise<void> {
     const response = await lastValueFrom(
       this.http.post<TokenResponse>('/api/v1/auth/login', { email, password }),
