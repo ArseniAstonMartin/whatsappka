@@ -9,7 +9,7 @@
           <li>
             <a
               class="nav-link"
-              [routerLink]="['/', item.path]"
+              [routerLink]="'/' + item.path"
               routerLinkActive="active"
               [attr.aria-label]="item.label"
               [attr.title]="item.label"
@@ -48,7 +48,7 @@
           </li>
           @for (item of secondaryItems(); track item.path) {
             <li>
-              <a class="icon-link" [routerLink]="['/', item.path]" [attr.aria-label]="item.label" [attr.title]="item.label">
+              <a class="icon-link" [routerLink]="'/' + item.path" [attr.aria-label]="item.label" [attr.title]="item.label">
                 <app-icon [name]="item.icon" [size]="24" />
               </a>
             </li>
@@ -79,7 +79,7 @@
     <ul class="bottom-list">
       @for (item of primaryItems(); track item.path) {
         <li>
-          <a class="bottom-link" [routerLink]="['/', item.path]" routerLinkActive="active" [attr.aria-label]="item.label">
+          <a class="bottom-link" [routerLink]="'/' + item.path" routerLinkActive="active" [attr.aria-label]="item.label">
             <app-icon [name]="item.icon" [size]="24" />
             <span>{{ item.label }}</span>
           </a>
