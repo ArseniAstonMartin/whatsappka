@@ -1,0 +1,45 @@
+<section class="section" aria-labelledby="notif-title">
+  <h2 id="notif-title" class="title">Уведомления</h2>
+  <p class="hint">
+    Выключение отключает только уведомление. Сообщения, приглашения и заявки остаются в своих разделах.
+  </p>
+  @if (saveError()) {
+    <p class="error" role="alert">{{ saveError() }}</p>
+  }
+  @if (loading()) {
+    <app-skeleton width="100%" height="56px" />
+  } @else if (error()) {
+    <app-state-panel kind="error" title="Не удалось загрузить настройки" [message]="error()!">
+      <button type="button" appButton variant="secondary" (click)="load()">Повторить</button>
+    </app-state-panel>
+  } @else {
+    <ul class="list">
+      @for (item of items(); track item.type) {
+        <li class="row">
+          <span class="who">
+            <span class="name" [id]="'cat-' + item.type">{{ title(item.type) }}</span>
+            @if (hint(item.type)) {
+              <span class="meta">{{ hint(item.type) }}</span>
+            }
+            @if (!item.canDisable) {
+              <span class="meta">Обязательное: отключить нельзя</span>
+            }
+          </span>
+          @if (item.canDisable) {
+            <input
+              type="checkbox"
+              role="switch"
+              class="switch"
+              [checked]="item.enabled"
+              [disabled]="isPending(item.type)"
+              [attr.aria-labelledby]="'cat-' + item.type"
+              (change)="toggle(item, $any($event.target))"
+            />
+          } @else {
+            <span class="fixed" aria-label="Всегда включено">Включено</span>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

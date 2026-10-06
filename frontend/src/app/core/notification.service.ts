@@ -5,7 +5,7 @@ import { CursorPage } from './profile.service';
 
 export type NotificationType =
   | 'FOLLOW' | 'MESSAGE' | 'CHAT_INVITATION' | 'COMMUNITY_INVITATION' | 'JOIN_REQUEST' | 'JOIN_RESULT'
-  | 'COMMENT' | 'REPLY' | 'REACTION' | 'SYSTEM';
+  | 'COMMENT' | 'REPLY' | 'REACTION' | 'SYSTEM' | 'MODERATION_RESULT' | 'CONTENT_HIDDEN';
 
 /** Куда вести: раздел и его идентификатор. Сервер отдаёт ссылку только к видимой цели. */
 export interface NotificationLink {

@@ -20,6 +20,8 @@ const LABELS: Record<NotificationType, string> = {
   REPLY: 'ответил(а) на ваш комментарий',
   REACTION: 'отреагировал(а) на ваш материал',
   SYSTEM: 'системное уведомление',
+  MODERATION_RESULT: 'решение по вашей жалобе',
+  CONTENT_HIDDEN: 'скрыл(а) ваш материал модерацией',
 };
 
 /**

@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { BlocksSettings } from './blocks/blocks';
 import { GroupInvitationsSettings } from './group-invitations/group-invitations';
 import { ChatInvitationsSettings } from './chat-invitations/chat-invitations';
+import { NotificationSettings } from './notification-settings/notification-settings';
 
 /**
  * Настройки. Блокировки здесь, потому что заблокированный профиль скрыт и на странице пользователя недоступен.
@@ -10,12 +11,13 @@ import { ChatInvitationsSettings } from './chat-invitations/chat-invitations';
  */
 @Component({
   selector: 'app-settings-page',
-  imports: [BlocksSettings, GroupInvitationsSettings, ChatInvitationsSettings, RouterLink],
+  imports: [BlocksSettings, GroupInvitationsSettings, ChatInvitationsSettings, NotificationSettings, RouterLink],
   template: `
     <h1 class="heading">Настройки</h1>
     <a class="security-link" routerLink="/settings/security">Безопасность и устройства</a>
     <app-group-invitations-settings />
     <app-chat-invitations-settings />
+    <app-notification-settings />
     <app-blocks-settings />
   `,
   styles: [`

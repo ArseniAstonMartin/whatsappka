@@ -58,6 +58,7 @@ const MESSAGES: Record<string, string> = {
   already_deleted: 'Комментарий уже удалён',
   invalid_reaction_type: 'Неизвестный тип реакции',
   not_found: 'Объект не найден',
+  system_notification_required: 'Это уведомление нельзя отключить',
   invalid_token: 'Ссылка недействительна или срок её действия истёк. Запросите новую.',
   google_not_configured: 'Вход через Google сейчас не настроен на сервере',
   google_unavailable: 'Google сейчас недоступен. Попробуйте позже или войдите по почте и паролю.',

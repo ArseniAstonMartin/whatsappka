@@ -18,6 +18,8 @@ const TOAST_TEXT: Record<NotificationType, string> = {
   REPLY: 'Новый ответ на комментарий',
   REACTION: 'Новая реакция',
   SYSTEM: 'Системное уведомление',
+  MODERATION_RESULT: 'Решение по вашей жалобе',
+  CONTENT_HIDDEN: 'Ваш материал скрыт модерацией',
 };
 
 /**
