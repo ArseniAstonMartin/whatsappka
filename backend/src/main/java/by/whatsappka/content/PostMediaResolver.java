@@ -8,9 +8,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Изображение публикации видно так же, как сама публикация: черновик и расписание — только автору
- * (он и так владелец файла, этот резолвер закрывает доступ всем остальным). Видимость опубликованной
- * записи резолвер получит вместе с лентой и правилами групп (TASK-042+).
+ * Изображение публикации видно так же, как сама публикация: автору — всегда (включая черновик и расписание),
+ * остальным — только опубликованную запись, если автор активен, между сторонами нет блокировки и группа
+ * видна зрителю. Те же правила, что у текста записи, поэтому картинка не открывается там, где запись скрыта.
  */
 @Component
 public class PostMediaResolver implements MediaLinkResolver {
@@ -28,9 +28,16 @@ public class PostMediaResolver implements MediaLinkResolver {
 
     @Override
     public boolean canView(UUID viewerId, UUID linkId) {
-        List<UUID> authors = jdbc.query(
-                "SELECT author_id FROM posts WHERE id = ? AND deleted_at IS NULL",
-                (rs, n) -> UUID.fromString(rs.getString("author_id")), linkId);
-        return !authors.isEmpty() && authors.get(0).equals(viewerId);
+        List<Boolean> visible = jdbc.query(
+                "SELECT (p.author_id = ?) OR (p.status = 'PUBLISHED' "
+                        + "AND NOT EXISTS (SELECT 1 FROM user_blocks b "
+                        + "  WHERE (b.blocker_id = p.author_id AND b.blocked_id = ?) "
+                        + "     OR (b.blocker_id = ? AND b.blocked_id = p.author_id)) "
+                        + "AND " + PostVisibilitySql.GROUP_VISIBLE_TO_VIEWER + ") AS visible "
+                        + "FROM posts p JOIN users u ON u.id = p.author_id "
+                        + "WHERE p.id = ? AND p.deleted_at IS NULL AND u.status = 'ACTIVE'",
+                (rs, n) -> rs.getBoolean("visible"),
+                viewerId, viewerId, viewerId, viewerId, viewerId, linkId);
+        return !visible.isEmpty() && visible.get(0);
     }
 }
