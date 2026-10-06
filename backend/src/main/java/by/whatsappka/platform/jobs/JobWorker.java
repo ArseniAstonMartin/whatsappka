@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -31,6 +32,7 @@ public class JobWorker {
 
     private static final Logger log = LoggerFactory.getLogger(JobWorker.class);
     private static final int REASON_MAX = 500;
+    private static final String TRACE_KEY = "traceId";
 
     private final JdbcTemplate jdbc;
     private final TransactionTemplate tx;
@@ -91,6 +93,8 @@ public class JobWorker {
     }
 
     private void run(Claimed job) {
+        // Все строки журнала этого задания несут один traceId: по нему видно, что произошло с заданием.
+        MDC.put(TRACE_KEY, "job-" + job.id());
         try {
             JobHandler handler = handlers.get(job.type());
             if (handler == null) {
@@ -107,6 +111,7 @@ public class JobWorker {
                 retryLater(job, reason);
             }
         } finally {
+            MDC.remove(TRACE_KEY);
             inFlight.decrementAndGet();
         }
     }

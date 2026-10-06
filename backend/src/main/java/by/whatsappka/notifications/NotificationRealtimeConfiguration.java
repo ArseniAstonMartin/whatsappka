@@ -1,5 +1,6 @@
 package by.whatsappka.notifications;
 
+import by.whatsappka.platform.redis.DeferredRedisListenerContainer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,8 +16,9 @@ public class NotificationRealtimeConfiguration {
     @Bean
     public RedisMessageListenerContainer notificationSignalListener(RedisConnectionFactory connections,
                                                                     NotificationRealtimeBridge bridge) {
-        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        DeferredRedisListenerContainer container = new DeferredRedisListenerContainer();
         container.setConnectionFactory(connections);
+        // Запуск по расписанию (RedisListenerStarter): недоступный Redis не должен не давать API стартовать.
         container.addMessageListener(bridge, new ChannelTopic(NotificationRealtimePublisher.CHANNEL));
         return container;
     }

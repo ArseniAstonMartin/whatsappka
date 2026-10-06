@@ -23,6 +23,10 @@ public class BootstrapAdminRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        // Без настроек первого администратора транзакция не открывается: иначе API не стартует при недоступном PostgreSQL.
+        if (!properties.requested()) {
+            return;
+        }
         // Пароль и email в журнал не пишутся.
         if (bootstrap.createIfAbsent(properties)) {
             log.info("Создан первый администратор из настроек окружения");

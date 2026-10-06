@@ -3,6 +3,13 @@ name: whatsappka
 # Локальные PostgreSQL, Redis, MinIO и одноразовые миграции.
 # Остановка и docker compose down не удаляют именованные volumes.
 
+# Ротация логов контейнеров: без неё json-file растёт без предела и съедает диск VM (PRD §11.1).
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 networks:
   # Внутренняя сеть: БД, Redis, S3, миграции и почта. Наружу не выходит.
   private:
@@ -21,6 +28,7 @@ volumes:
 
 services:
   postgres:
+    logging: *logging
     image: postgres:17.11@sha256:86fa57b44a1d38f09970f64ac71eb492f7a9cf94d08b85e1c8f07bb0fc0a1761
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-whatsappka}
@@ -56,6 +64,7 @@ services:
     restart: unless-stopped
 
   redis:
+    logging: *logging
     image: redis:8.10.2@sha256:9b838698c59be36d7eb03edcb8dc210c49b91240b92889d0c37d8e29ce3eb12b
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
@@ -88,6 +97,7 @@ services:
     restart: unless-stopped
 
   migrate:
+    logging: *logging
     image: flyway/flyway:13.9.0@sha256:37a6264058aa02ec8def04dd27770dd22ba835b3d73941f9d492b122c70410ad
     command: migrate
     environment:
@@ -110,6 +120,7 @@ services:
           memory: 256M
 
   minio:
+    logging: *logging
     image: whatsappka-minio:9e49d5e7a648
     platform: linux/arm64
     build:
@@ -138,6 +149,7 @@ services:
     restart: unless-stopped
 
   minio-init:
+    logging: *logging
     image: whatsappka-minio:9e49d5e7a648
     platform: linux/arm64
     build:
@@ -157,6 +169,7 @@ services:
     restart: "no"
 
   backend:
+    logging: *logging
     build:
       context: ./backend
     image: whatsappka-backend:local
@@ -206,13 +219,13 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
-    # Публичный эндпоинт без авторизации. Когда появится readiness из TASK-085, заменить на него.
+    # Readiness на служебном порту: 503 при недоступном PostgreSQL. Порт слушает только loopback контейнера.
     healthcheck:
       test:
         - CMD
         - bash
         - -c
-        - "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /api/v1/auth/providers HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"
+        - "exec 3<>/dev/tcp/127.0.0.1/9090 && printf 'GET /actuator/health/readiness HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"
       interval: 10s
       timeout: 5s
       retries: 24
@@ -224,6 +237,7 @@ services:
     restart: unless-stopped
 
   worker:
+    logging: *logging
     image: whatsappka-backend:local
     environment:
       SPRING_PROFILES_ACTIVE: worker
@@ -259,6 +273,16 @@ services:
     networks:
       - private
       - edge
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - "exec 3<>/dev/tcp/127.0.0.1/9090 && printf 'GET /actuator/health/readiness HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
     depends_on:
       postgres:
         condition: service_healthy
@@ -275,6 +299,7 @@ services:
     restart: unless-stopped
 
   frontend:
+    logging: *logging
     build:
       context: ./frontend
     image: whatsappka-frontend:local
@@ -302,6 +327,7 @@ services:
   # docker compose --profile mail up -d. Приложению нужны SMTP_HOST=mailpit, SMTP_PORT=1025, SMTP_STARTTLS=false.
   # Перед использованием закрепите образ по digest, как остальные сервисы.
   mailpit:
+    logging: *logging
     image: axllent/mailpit:latest
     profiles:
       - mail

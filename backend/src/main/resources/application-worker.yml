@@ -1,3 +1,9 @@
+logging:
+  structured:
+    ecs:
+      service:
+        name: ${SERVICE_NAME:whatsappka-worker}
+
 spring:
   main:
     web-application-type: none

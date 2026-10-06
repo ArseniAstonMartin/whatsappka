@@ -1,5 +1,6 @@
 package by.whatsappka.platform.outbox;
 
+import by.whatsappka.platform.redis.DeferredRedisListenerContainer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -18,8 +19,9 @@ public class OutboxRelayConfiguration {
 
     @Bean
     public RedisMessageListenerContainer outboxSignalListener(RedisConnectionFactory connections, OutboxRelay relay) {
-        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        DeferredRedisListenerContainer container = new DeferredRedisListenerContainer();
         container.setConnectionFactory(connections);
+        // Запуск по расписанию (RedisListenerStarter): сигнал — ускорение, а плановый опрос работает и без него.
         container.addMessageListener((message, pattern) -> relay.poll(), new ChannelTopic(OutboxSignals.CHANNEL));
         return container;
     }

@@ -71,6 +71,11 @@ public class StompConnections {
         return connection;
     }
 
+    /** Число подтверждённых соединений: для метрик, без состава пользователей. */
+    public int activeCount() {
+        return authenticated.size();
+    }
+
     /** Закрывает все подтверждённые соединения пользователя: после смены ролей клиент переподключится и получит новые права. */
     public void closeUser(UUID userId) {
         for (Map.Entry<String, Connection> entry : authenticated.entrySet()) {

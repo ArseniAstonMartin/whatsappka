@@ -59,3 +59,43 @@ whatsappka:
     start-tls: ${SMTP_STARTTLS:true}
     from: ${MAIL_FROM:WhatsAppka <no-reply@localhost>}
     app-url: ${APP_URL:http://localhost:4200}
+
+# Служебные эндпоинты на отдельном порту. Он слушает только loopback внутри контейнера и не публикуется compose.
+management:
+  server:
+    address: ${MANAGEMENT_ADDRESS:127.0.0.1}
+    port: ${MANAGEMENT_PORT:9090}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        # Живость не зависит от внешних сервисов: зависший или отсутствующий PostgreSQL не должен вызывать перезапуск JVM.
+        liveness:
+          include: livenessState
+        # Готовность требует PostgreSQL. Redis и MinIO сюда не входят: их сбой даёт DEGRADED, а не снятие с трафика.
+        readiness:
+          include: readinessState,db
+      status:
+        order: DOWN,OUT_OF_SERVICE,DEGRADED,UP
+  health:
+    redis:
+      enabled: false
+  metrics:
+    system:
+      diskspace:
+        paths: ${MEDIA_DISK_PATH:.}
+
+logging:
+  structured:
+    format:
+      console: ecs
+    ecs:
+      service:
+        name: ${SERVICE_NAME:whatsappka-api}
+

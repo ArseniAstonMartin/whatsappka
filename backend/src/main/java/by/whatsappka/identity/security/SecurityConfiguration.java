@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -63,6 +64,9 @@ public class SecurityConfiguration {
                                 "/api/v1/auth/providers",
                                 "/api/v1/auth/google/start",
                                 "/api/v1/auth/google/callback").permitAll()
+                        // Служебные эндпоинты актуатора обслуживаются только на отдельном порту (management), который
+                        // слушает loopback внутри контейнера и не публикуется. На основном порту их нет, поэтому правило безопасно.
+                        .requestMatchers(EndpointRequest.toAnyEndpoint()).permitAll()
                         // Рукопожатие WebSocket; авторизация кадров CONNECT выполняется в канале STOMP.
                         .requestMatchers(HttpMethod.GET, "/ws").permitAll()
                         .requestMatchers("/error", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
