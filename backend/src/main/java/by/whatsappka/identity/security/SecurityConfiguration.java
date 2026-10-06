@@ -33,7 +33,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfiguration {
 
     @Bean
-    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, AccessService access, ObjectMapper mapper)
+    public SecurityFilterChain apiSecurityFilterChain(HttpSecurity http, AccessService access,
+                                                      by.whatsappka.identity.activity.ActivityRecorder activity, ObjectMapper mapper)
             throws Exception {
         return http
                 // Bearer-токены браузер не прикладывает сам. Cookie-операции защищены SameSite=Lax и проверкой Origin.
@@ -80,7 +81,7 @@ public class SecurityConfiguration {
                         .accessDeniedHandler((request, response, ex) ->
                                 write(request, response, mapper, HttpStatus.FORBIDDEN, "forbidden",
                                         "Действие запрещено")))
-                .addFilterBefore(new BearerAuthenticationFilter(access), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new BearerAuthenticationFilter(access, activity), UsernamePasswordAuthenticationFilter.class)
                 .build();
     }
 
