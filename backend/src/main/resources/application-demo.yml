@@ -1,0 +1,5 @@
+# Включается только локально: SPRING_PROFILES_ACTIVE=backend,demo и DEMO_ENABLED=true с DEMO_PASSWORD.
+whatsappka:
+  demo:
+    enabled: ${DEMO_ENABLED:false}
+    password: ${DEMO_PASSWORD:}
