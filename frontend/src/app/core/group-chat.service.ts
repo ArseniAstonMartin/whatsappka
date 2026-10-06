@@ -23,9 +23,9 @@ export interface GroupChatInvitation {
 export class GroupChatService {
   private readonly http = inject(HttpClient);
 
-  create(title: string): Promise<{ id: string }> {
+  create(title: string, avatarMediaId: string | null = null): Promise<{ id: string }> {
     return lastValueFrom(
-      this.http.post<{ id: string }>('/api/v1/conversations/groups', { title, avatarMediaId: null }),
+      this.http.post<{ id: string }>('/api/v1/conversations/groups', { title, avatarMediaId }),
     );
   }
 

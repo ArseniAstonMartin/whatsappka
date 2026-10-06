@@ -2,6 +2,8 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CommunityService, CommunitySummary } from '../../../core/community.service';
 import { toProblem } from '../../../core/api-error';
+import { Avatar } from '../../../shared/ui/avatar/avatar';
+import { MediaView } from '../../../shared/media/media-view/media-view';
 import { AppButton } from '../../../shared/ui/button/app-button';
 import { Skeleton } from '../../../shared/ui/skeleton/skeleton';
 import { StatePanel } from '../../../shared/state-panel/state-panel';
@@ -11,7 +13,7 @@ type Tab = 'catalog' | 'mine';
 /** Каталог открытых сообществ и список своих групп, двумя вкладками одной страницы. */
 @Component({
   selector: 'app-community-catalog',
-  imports: [RouterLink, AppButton, Skeleton, StatePanel],
+  imports: [RouterLink, AppButton, Avatar, MediaView, Skeleton, StatePanel],
   templateUrl: './community-catalog.html',
   styleUrl: './community-catalog.scss',
 })

@@ -40,6 +40,7 @@ export interface ChatMessage {
   id: string;
   seq: number;
   senderId: string;
+  senderAvatarMediaId: string | null;
   body: string | null;
   createdAt: string;
   updatedAt: string;

@@ -27,7 +27,11 @@
       </div>
       <a class="settings-link" [routerLink]="['/chats', chat.id, 'settings']" appButton variant="ghost">Настройки</a>
     } @else {
-      <app-avatar [name]="chat.otherDisplayName ?? ''" [size]="40" />
+      @if (chat.avatarMediaId) {
+        <app-media-view [mediaId]="chat.avatarMediaId" variant="320" shape="circle" [fallbackToOriginal]="true" [label]="'Аватар: ' + (chat.otherDisplayName ?? '')" />
+      } @else {
+        <app-avatar [name]="chat.otherDisplayName ?? ''" [size]="40" />
+      }
       <div class="who">
         <a class="name" [routerLink]="['/users', chat.otherUsername]">{{ chat.otherDisplayName }}</a>
         <span class="username">&#64;{{ chat.otherUsername }}</span>
@@ -67,6 +71,15 @@
       <ol class="messages">
         @for (message of messages(); track message.id) {
           <li class="msg" [class.own]="isOwn(message)" [class.deleted]="message.deleted">
+            @if (!isOwn(message) && !message.deleted) {
+              <span class="msg-avatar">
+                @if (message.senderAvatarMediaId; as avatarId) {
+                  <app-media-view [mediaId]="avatarId" variant="320" shape="circle" [fallbackToOriginal]="true" [label]="'Аватар: ' + (senderName(message) ?? '')" />
+                } @else {
+                  <app-avatar [name]="senderName(message) ?? ''" [size]="32" />
+                }
+              </span>
+            }
             @if (message.deleted) {
               <p class="muted">Сообщение удалено</p>
             } @else {

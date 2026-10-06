@@ -87,3 +87,23 @@
   display: flex;
   justify-content: center;
 }
+
+.thumb {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-avatar);
+  overflow: hidden;
+}
+
+.thumb app-avatar,
+.thumb app-media-view {
+  width: 40px;
+  height: 40px;
+  display: block;
+}
+
+.intro {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+}

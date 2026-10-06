@@ -791,6 +791,7 @@ export class ChatDialog {
       id: payload.messageId,
       seq: payload.seq,
       senderId: this.selfId() ?? '',
+      senderAvatarMediaId: null,
       body: item.body,
       createdAt: item.createdAt,
       updatedAt: item.createdAt,

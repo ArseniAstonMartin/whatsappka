@@ -122,6 +122,28 @@
   gap: var(--space-2);
 }
 
+/* Аватар собеседника слева от пузыря; место под него резервируется отступом. */
+.msg:not(.own) {
+  margin-left: calc(32px + var(--space-2));
+}
+
+.msg-avatar {
+  position: absolute;
+  left: calc(-1 * (32px + var(--space-2)));
+  bottom: var(--space-2);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-avatar);
+  overflow: hidden;
+}
+
+.msg-avatar app-avatar,
+.msg-avatar app-media-view {
+  width: 32px;
+  height: 32px;
+  display: block;
+}
+
 .msg.own {
   justify-self: end;
   background: var(--color-primary-soft);

@@ -1,7 +1,12 @@
 <h1 class="heading">Новый групповой чат</h1>
+<p class="intro">Групповой чат — переписка нескольких участников. Публикации записей для этого не нужны: их ведут сообщества.</p>
 <app-card>
   <form class="form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
     <app-text-field formControlName="title" label="Название" [errorText]="errorFor()" />
+    <fieldset class="avatar-field">
+      <legend>Картинка чата (необязательно)</legend>
+      <app-media-upload purpose="AVATAR" (ready)="onAvatar($event)" (removed)="avatarMediaId.set(null)" />
+    </fieldset>
     @if (formMessage()) {
       <p class="form-error" role="alert">{{ formMessage() }}</p>
     }

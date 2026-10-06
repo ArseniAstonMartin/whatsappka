@@ -134,8 +134,9 @@ export class ChatList implements OnInit {
     return chat.type === 'GROUP' ? (chat.title ?? 'Групповой чат') : (chat.otherDisplayName ?? '');
   }
 
+  /** У личного диалога это аватар собеседника, у группового — аватар чата. */
   protected avatarId(chat: Conversation): string | null {
-    return chat.type === 'GROUP' ? chat.avatarMediaId : null;
+    return chat.avatarMediaId;
   }
 
   protected preview(chat: Conversation): string {
