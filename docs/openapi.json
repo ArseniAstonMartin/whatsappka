@@ -865,7 +865,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RoleRequest"
+                "$ref": "#/components/schemas/CommunityRoleRequest"
               }
             }
           },
@@ -1246,7 +1246,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RoleRequest"
+                "$ref": "#/components/schemas/GroupRoleRequest"
               }
             }
           },
@@ -1991,7 +1991,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateRequest"
+                "$ref": "#/components/schemas/UpdateSettingRequest"
               }
             }
           },
@@ -2498,7 +2498,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateRequest"
+                "$ref": "#/components/schemas/CreateCommentRequest"
               }
             }
           },
@@ -4663,7 +4663,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateRequest"
+                "$ref": "#/components/schemas/CreateCommunityRequest"
               }
             }
           },
@@ -4675,7 +4675,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/GroupRef"
+                  "$ref": "#/components/schemas/CommunityRef"
                 }
               }
             }
@@ -4794,7 +4794,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TransferRequest"
+                "$ref": "#/components/schemas/CommunityTransferRequest"
               }
             }
           },
@@ -5889,7 +5889,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/InviteRequest"
+                "$ref": "#/components/schemas/CommunityInviteRequest"
               }
             }
           },
@@ -6609,7 +6609,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TransferRequest"
+                "$ref": "#/components/schemas/GroupTransferRequest"
               }
             }
           },
@@ -7109,7 +7109,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/InviteRequest"
+                "$ref": "#/components/schemas/ChatInviteRequest"
               }
             }
           },
@@ -9143,7 +9143,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateRequest"
+                "$ref": "#/components/schemas/UpdatePostRequest"
               }
             }
           },
@@ -9726,7 +9726,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateRequest"
+                "$ref": "#/components/schemas/UpdateCommunityRequest"
               }
             }
           },
@@ -10475,7 +10475,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateRequest"
+                "$ref": "#/components/schemas/UpdateCommentRequest"
               }
             }
           },
@@ -16723,7 +16723,7 @@
           }
         }
       },
-      "RoleRequest": {
+      "CommunityRoleRequest": {
         "type": "object",
         "properties": {
           "role": {
@@ -16737,6 +16737,14 @@
           "mediaId": {
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "GroupRoleRequest": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string"
           }
         }
       },
@@ -16802,7 +16810,7 @@
         }
       },
       "JsonNode": {},
-      "UpdateRequest": {
+      "UpdateSettingRequest": {
         "type": "object",
         "properties": {
           "value": {
@@ -16891,6 +16899,18 @@
         "type": "object",
         "properties": {
           "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "CreateCommentRequest": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "parentId": {
             "type": "string",
             "format": "uuid"
           }
@@ -17019,7 +17039,24 @@
           }
         }
       },
-      "GroupRef": {
+      "CreateCommunityRequest": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          }
+        }
+      },
+      "CommunityRef": {
         "type": "object",
         "properties": {
           "id": {
@@ -17028,7 +17065,7 @@
           }
         }
       },
-      "TransferRequest": {
+      "CommunityTransferRequest": {
         "type": "object",
         "properties": {
           "userId": {
@@ -17046,7 +17083,7 @@
           }
         }
       },
-      "InviteRequest": {
+      "CommunityInviteRequest": {
         "type": "object",
         "properties": {
           "userId": {
@@ -17068,6 +17105,15 @@
         "type": "object",
         "properties": {
           "id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "GroupTransferRequest": {
+        "type": "object",
+        "properties": {
+          "userId": {
             "type": "string",
             "format": "uuid"
           }
@@ -17095,6 +17141,15 @@
           }
         }
       },
+      "ChatInviteRequest": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "CreateGroupRequest": {
         "type": "object",
         "properties": {
@@ -17102,6 +17157,15 @@
             "type": "string"
           },
           "avatarMediaId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "GroupRef": {
+        "type": "object",
+        "properties": {
+          "id": {
             "type": "string",
             "format": "uuid"
           }
@@ -17277,6 +17341,31 @@
           }
         }
       },
+      "UpdatePostRequest": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "media": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "hashtags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "ProfilePatch": {
         "type": "object",
         "properties": {
@@ -17340,6 +17429,20 @@
           }
         }
       },
+      "UpdateCommunityRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          }
+        }
+      },
       "RenameRequest": {
         "type": "object",
         "properties": {
@@ -17370,6 +17473,18 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "UpdateCommentRequest": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

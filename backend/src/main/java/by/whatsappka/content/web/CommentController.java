@@ -32,7 +32,7 @@ public class CommentController {
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<CommentRef> create(
             @PathVariable("postId") UUID postId,
-            @RequestBody CreateRequest request,
+            @RequestBody CreateCommentRequest request,
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
         UUID id = comments.create(viewer.userId(), postId, request.parentId(), request.body());
@@ -52,7 +52,7 @@ public class CommentController {
     @PatchMapping("/comments/{id}")
     public ResponseEntity<Void> update(
             @PathVariable("id") UUID id,
-            @RequestBody UpdateRequest request,
+            @RequestBody UpdateCommentRequest request,
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
         comments.update(id, viewer.userId(), request.version(), request.body());
@@ -65,10 +65,10 @@ public class CommentController {
         return ResponseEntity.noContent().build();
     }
 
-    public record CreateRequest(String body, UUID parentId) {
+    public record CreateCommentRequest(String body, UUID parentId) {
     }
 
-    public record UpdateRequest(String body, long version) {
+    public record UpdateCommentRequest(String body, long version) {
     }
 
     public record CommentRef(UUID id) {

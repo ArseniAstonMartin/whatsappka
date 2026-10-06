@@ -43,7 +43,7 @@ public class CommunityInvitationController {
     public ResponseEntity<JsonNode> invite(
             @PathVariable("id") UUID groupId,
             @RequestHeader(value = "Idempotency-Key", required = false) String key,
-            @RequestBody InviteRequest request,
+            @RequestBody CommunityInviteRequest request,
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
         if (key == null) {
@@ -52,7 +52,7 @@ public class CommunityInvitationController {
         byte[] content = IdempotencyRecords.utf8(groupId + "|" + request.userId());
         IdempotentResult result = idempotency.execute(viewer.userId(), CREATE_OPERATION, key, content, () -> {
             UUID id = invitations.invite(viewer.userId(), groupId, request.userId());
-            return new IdempotentResponse(HttpStatus.CREATED.value(), new InvitationRef(id));
+            return new IdempotentResponse(HttpStatus.CREATED.value(), new CommunityInvitationRef(id));
         });
         return ResponseEntity.status(result.status())
                 .header("Idempotent-Replayed", String.valueOf(result.replayed()))
@@ -82,9 +82,9 @@ public class CommunityInvitationController {
         return invitations.pendingFor(viewer.userId());
     }
 
-    public record InviteRequest(UUID userId) {
+    public record CommunityInviteRequest(UUID userId) {
     }
 
-    public record InvitationRef(UUID id) {
+    public record CommunityInvitationRef(UUID id) {
     }
 }

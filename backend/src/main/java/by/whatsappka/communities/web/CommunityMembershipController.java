@@ -57,7 +57,7 @@ public class CommunityMembershipController {
     public ResponseEntity<Void> setRole(
             @PathVariable("id") UUID id,
             @PathVariable("userId") UUID userId,
-            @RequestBody RoleRequest request,
+            @RequestBody CommunityRoleRequest request,
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
         membership.setRole(id, viewer.userId(), userId, request.role());
@@ -67,16 +67,16 @@ public class CommunityMembershipController {
     @PostMapping("/groups/{id}/transfer")
     public ResponseEntity<Void> transfer(
             @PathVariable("id") UUID id,
-            @RequestBody TransferRequest request,
+            @RequestBody CommunityTransferRequest request,
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
         membership.transferOwnership(id, viewer.userId(), request.userId());
         return ResponseEntity.noContent().build();
     }
 
-    public record RoleRequest(String role) {
+    public record CommunityRoleRequest(String role) {
     }
 
-    public record TransferRequest(UUID userId) {
+    public record CommunityTransferRequest(UUID userId) {
     }
 }

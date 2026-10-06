@@ -40,7 +40,7 @@ public class InvitationController {
     public ResponseEntity<JsonNode> invite(
             @PathVariable("id") UUID conversationId,
             @RequestHeader(value = "Idempotency-Key", required = false) String key,
-            @RequestBody InviteRequest request,
+            @RequestBody ChatInviteRequest request,
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
         if (key == null) {
@@ -49,7 +49,7 @@ public class InvitationController {
         byte[] content = IdempotencyRecords.utf8(conversationId + "|" + request.userId());
         IdempotentResult result = idempotency.execute(viewer.userId(), CREATE_OPERATION, key, content, () -> {
             UUID id = invitations.invite(viewer.userId(), conversationId, request.userId());
-            return new IdempotentResponse(HttpStatus.CREATED.value(), new InvitationRef(id));
+            return new IdempotentResponse(HttpStatus.CREATED.value(), new ChatInvitationRef(id));
         });
         return ResponseEntity.status(result.status())
                 .header("Idempotent-Replayed", String.valueOf(result.replayed()))
@@ -79,9 +79,9 @@ public class InvitationController {
         return invitations.pendingFor(viewer.userId());
     }
 
-    public record InviteRequest(UUID userId) {
+    public record ChatInviteRequest(UUID userId) {
     }
 
-    public record InvitationRef(UUID id) {
+    public record ChatInvitationRef(UUID id) {
     }
 }

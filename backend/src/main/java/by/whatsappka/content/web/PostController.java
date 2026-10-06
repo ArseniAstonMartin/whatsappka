@@ -66,7 +66,7 @@ public class PostController {
     @PatchMapping("/posts/{id}")
     public ResponseEntity<Void> update(
             @PathVariable("id") UUID id,
-            @RequestBody UpdateRequest request,
+            @RequestBody UpdatePostRequest request,
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
         posts.update(id, viewer.userId(), request.version(), request.body(), request.media(), request.hashtags());
@@ -127,7 +127,7 @@ public class PostController {
     public record CreateRequest(String body, UUID groupId, List<UUID> media, List<String> hashtags) {
     }
 
-    public record UpdateRequest(String body, List<UUID> media, List<String> hashtags, long version) {
+    public record UpdatePostRequest(String body, List<UUID> media, List<String> hashtags, long version) {
     }
 
     public record ScheduleRequest(Instant publishAt) {

@@ -33,7 +33,7 @@ public class AdminSettingsController {
     @PutMapping("/admin/settings/{key}")
     public AppSettingsService.Values update(
             @PathVariable("key") String key,
-            @RequestBody UpdateRequest body,
+            @RequestBody UpdateSettingRequest body,
             @AuthenticationPrincipal AuthenticatedUser admin,
             HttpServletRequest request
     ) {
@@ -43,6 +43,6 @@ public class AdminSettingsController {
     }
 
     /** value — строка, логическое или число; сервер приводит к каноническому виду по правилам настройки. */
-    public record UpdateRequest(JsonNode value, String reason) {
+    public record UpdateSettingRequest(JsonNode value, String reason) {
     }
 }

@@ -36,9 +36,9 @@ public class CommunityController {
     }
 
     @PostMapping("/groups")
-    public ResponseEntity<GroupRef> create(@RequestBody CreateRequest request, @AuthenticationPrincipal AuthenticatedUser viewer) {
+    public ResponseEntity<CommunityRef> create(@RequestBody CreateCommunityRequest request, @AuthenticationPrincipal AuthenticatedUser viewer) {
         UUID id = groups.create(viewer.userId(), request.slug(), request.name(), request.description(), request.visibility());
-        return ResponseEntity.status(HttpStatus.CREATED).body(new GroupRef(id));
+        return ResponseEntity.status(HttpStatus.CREATED).body(new CommunityRef(id));
     }
 
     @GetMapping("/groups")
@@ -67,7 +67,7 @@ public class CommunityController {
     @PatchMapping("/groups/{id}")
     public ResponseEntity<Void> update(
             @PathVariable("id") UUID id,
-            @RequestBody UpdateRequest request,
+            @RequestBody UpdateCommunityRequest request,
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
         groups.update(id, viewer.userId(), request.name(), request.description(), request.visibility());
@@ -100,15 +100,15 @@ public class CommunityController {
         return ResponseEntity.noContent().build();
     }
 
-    public record CreateRequest(String slug, String name, String description, String visibility) {
+    public record CreateCommunityRequest(String slug, String name, String description, String visibility) {
     }
 
-    public record UpdateRequest(String name, String description, String visibility) {
+    public record UpdateCommunityRequest(String name, String description, String visibility) {
     }
 
     public record MediaRequest(UUID mediaId) {
     }
 
-    public record GroupRef(UUID id) {
+    public record CommunityRef(UUID id) {
     }
 }

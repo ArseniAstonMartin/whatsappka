@@ -60,7 +60,7 @@ public class GroupController {
     public ResponseEntity<Void> setRole(
             @PathVariable("id") UUID id,
             @PathVariable("userId") UUID userId,
-            @RequestBody RoleRequest request,
+            @RequestBody GroupRoleRequest request,
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
         groups.setRole(id, viewer.userId(), userId, request.role());
@@ -70,7 +70,7 @@ public class GroupController {
     @PostMapping("/conversations/{id}/transfer")
     public ResponseEntity<Void> transfer(
             @PathVariable("id") UUID id,
-            @RequestBody TransferRequest request,
+            @RequestBody GroupTransferRequest request,
             @AuthenticationPrincipal AuthenticatedUser viewer
     ) {
         groups.transferOwnership(id, viewer.userId(), request.userId());
@@ -106,10 +106,10 @@ public class GroupController {
     public record GroupRef(UUID id) {
     }
 
-    public record RoleRequest(String role) {
+    public record GroupRoleRequest(String role) {
     }
 
-    public record TransferRequest(UUID userId) {
+    public record GroupTransferRequest(UUID userId) {
     }
 
     public record AvatarRequest(UUID mediaId) {
