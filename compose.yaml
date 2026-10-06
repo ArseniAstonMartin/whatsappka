@@ -4,8 +4,12 @@ name: whatsappka
 # Остановка и docker compose down не удаляют именованные volumes.
 
 networks:
+  # Внутренняя сеть: БД, Redis, S3, миграции и почта. Наружу не выходит.
   private:
     internal: true
+  # Обычная сеть: только приложения, которым нужен выход наружу (Google OIDC, SMTP) и опубликованный порт статики.
+  edge:
+    driver: bridge
 
 volumes:
   postgres-data:
@@ -151,6 +155,148 @@ services:
       minio:
         condition: service_healthy
     restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+    image: whatsappka-backend:local
+    environment:
+      SPRING_PROFILES_ACTIVE: backend
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8080
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-whatsappka}
+      DB_USERNAME: ${DB_USERNAME:-whatsappka_app}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+      MINIO_BUCKET: ${MINIO_BUCKET:-whatsappka-media}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      WHATSAPPKA_SECURITY_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      WHATSAPPKA_SECURITY_ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:4200}
+      # false нужен для входа по http в локальной сети; за HTTPS ставьте true.
+      REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-false}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:4200}
+      APP_URL: ${APP_URL:-http://localhost:4200}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-http://localhost:4200/api/v1/auth/google/callback}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_USERNAME: ${BOOTSTRAP_ADMIN_USERNAME:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      MAIL_FROM: ${MAIL_FROM:-WhatsAppka <no-reply@localhost>}
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
+    networks:
+      - private
+      - edge
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    # Публичный эндпоинт без авторизации. Когда появится readiness из TASK-085, заменить на него.
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /api/v1/auth/providers HTTP/1.0\\r\\nHost: 127.0.0.1\\r\\n\\r\\n' >&3 && head -n1 <&3 | grep -q ' 200 '"
+      interval: 10s
+      timeout: 5s
+      retries: 24
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    restart: unless-stopped
+
+  worker:
+    image: whatsappka-backend:local
+    environment:
+      SPRING_PROFILES_ACTIVE: worker
+      SPRING_MAIN_WEB_APPLICATION_TYPE: servlet
+      SERVER_ADDRESS: 0.0.0.0
+      SERVER_PORT: 8081
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-whatsappka}
+      DB_USERNAME: ${DB_USERNAME:-whatsappka_app}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_REGION: ${MINIO_REGION:-us-east-1}
+      MINIO_BUCKET: ${MINIO_BUCKET:-whatsappka-media}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      WHATSAPPKA_SECURITY_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      WHATSAPPKA_SECURITY_ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:4200}
+      # false нужен для входа по http в локальной сети; за HTTPS ставьте true.
+      REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-false}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:4200}
+      APP_URL: ${APP_URL:-http://localhost:4200}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
+      MAIL_FROM: ${MAIL_FROM:-WhatsAppka <no-reply@localhost>}
+      JOB_CONCURRENCY: ${JOB_CONCURRENCY:-2}
+      OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-20}
+    networks:
+      - private
+      - edge
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    image: whatsappka-frontend:local
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-4200}:80"
+    networks:
+      - private
+      - edge
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    restart: unless-stopped
 
   # Локальный SMTP для проверки писем (подтверждение почты, сброс пароля). Включается профилем mail:
   # docker compose --profile mail up -d. Приложению нужны SMTP_HOST=mailpit, SMTP_PORT=1025, SMTP_STARTTLS=false.
