@@ -66,7 +66,7 @@ final class ConversationSql {
      */
     private static final String DIRECT_COLUMNS = """
             SELECT c.id, c.updated_at, 'DIRECT' AS conv_type, u.id AS other_id, u.username, p.display_name,
-                   NULL::varchar AS title, NULL::uuid AS avatar_media_id,
+                   NULL::varchar AS title, p.avatar_media_id AS avatar_media_id,
                    EXISTS (SELECT 1 FROM user_blocks b
                            WHERE (b.blocker_id = m.user_id AND b.blocked_id = u.id)
                               OR (b.blocker_id = u.id AND b.blocked_id = m.user_id)) AS blocked,

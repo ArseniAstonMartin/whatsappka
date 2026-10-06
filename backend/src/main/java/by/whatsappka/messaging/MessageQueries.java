@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ public class MessageQueries {
             UUID id,
             long seq,
             UUID senderId,
+            UUID senderAvatarMediaId,
             String body,
             Instant createdAt,
             Instant updatedAt,
@@ -81,6 +83,7 @@ public class MessageQueries {
 
     private List<MessageView> views(UUID viewerId, List<Row> shown) {
         Map<UUID, List<Attachment>> attachments = attachmentsFor(shown);
+        Map<UUID, UUID> senderAvatars = avatarsOf(shown);
         List<MessageView> items = new ArrayList<>(shown.size());
         for (Row row : shown) {
             boolean deleted = row.deletedAt() != null;
@@ -88,6 +91,7 @@ public class MessageQueries {
                     row.id(),
                     row.seq(),
                     row.senderId(),
+                    senderAvatars.get(row.senderId()),
                     deleted ? null : row.body(),
                     row.createdAt(),
                     row.updatedAt(),
@@ -97,6 +101,21 @@ public class MessageQueries {
                     row.senderId().equals(viewerId) ? row.clientMessageId() : null));
         }
         return items;
+    }
+
+    /** Аватары отправителей страницы одним запросом; у пользователя без аватара значение null. */
+    private Map<UUID, UUID> avatarsOf(List<Row> rows) {
+        List<UUID> ids = rows.stream().map(Row::senderId).distinct().toList();
+        Map<UUID, UUID> avatars = new HashMap<>();
+        if (ids.isEmpty()) {
+            return avatars;
+        }
+        String placeholders = String.join(",", Collections.nCopies(ids.size(), "?"));
+        RowCallbackHandler collect = (rs) -> avatars.put(UUID.fromString(rs.getString("user_id")),
+                rs.getObject("avatar_media_id") == null ? null : UUID.fromString(rs.getString("avatar_media_id")));
+        jdbc.query("SELECT user_id, avatar_media_id FROM user_profiles WHERE user_id IN (" + placeholders + ")",
+                collect, ids.toArray());
+        return avatars;
     }
 
     private Map<UUID, List<Attachment>> attachmentsFor(List<Row> rows) {
